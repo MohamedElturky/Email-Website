@@ -46,6 +46,8 @@ button {
   color: var(--button-text);
   border: none;
   padding: 10px 15px;
+  margin-right: 10px;
+  margin-bottom: 10px;
   font-size: 16px;
   border-radius: 5px;
   cursor: pointer;
@@ -81,3 +83,50 @@ input, textarea {
   background-color: var(--secondary-color);
   color: var(--button-text);
 }
+#emails-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+#emails-list li {
+  background-color: #ffffff;
+  margin: 10px 0;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+#emails-list li:hover {
+  background-color: #f1f1f1;
+}
+/* Attachment File Button */
+.attachment-icon {
+  display: inline-block;
+  cursor: pointer;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  padding: 10px 15px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center;
+  margin-top: 10px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.attachment-icon:hover {
+  background-color: var(--secondary-color);
+  color: var(--button-text);
+}
+
+input[type="file"] {
+  display: none; /* Hide the default file input button */
+}
+
+.attachment-icon span {
+  font-size: 18px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
