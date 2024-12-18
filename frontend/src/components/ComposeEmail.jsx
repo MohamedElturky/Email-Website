@@ -9,92 +9,74 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
     subject: '',
     body: '',
     attachments: [],
+    priority: 1, // Default priority
   });
 
-  const [error, setError] = useState(''); // State for validation errors
-  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEmail({ ...email, [name]: value });
-    if (name === 'to') setError(''); // Clear error when typing
+    if (name === 'to') setError('');
   };
 
-  // Validate email format for multiple recipients
   const validateEmails = (emails) => {
-    const emailList = emails.split(',').map((email) => email.trim());
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regex for email validation
-    return emailList.every((email) => emailRegex.test(email)); // Returns true if all emails are valid
+    const emailList = emails.split(',').map(email => email.trim());
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailList.every(email => emailRegex.test(email));
   };
 
-  // Handle file attachment
   const handleAttachment = (e) => {
     const files = Array.from(e.target.files);
     setEmail({ ...email, attachments: [...email.attachments, ...files] });
   };
 
-  // Remove an attachment
   const handleRemoveAttachment = (index) => {
     const updatedAttachments = email.attachments.filter((_, i) => i !== index);
     setEmail({ ...email, attachments: updatedAttachments });
   };
 
-  // Handle email send
   const handleSend = async () => {
-    const recipientList = email.to.split(',').map((recipient) => recipient.trim());
+    const recipientList = email.to.split(',').map(recipient => recipient.trim());
 
-    // Validate the emails
     if (!validateEmails(email.to)) {
       setError('One or more recipient emails are invalid. Please check the format.');
       return;
     }
 
-    // Create FormData for file upload
     const formData = new FormData();
     formData.append('from', email.from);
-    formData.append('to', recipientList.join(',')); // Send recipients as a comma-separated string
+    formData.append('to', recipientList.join(','));
     formData.append('subject', email.subject);
     formData.append('body', email.body);
+    formData.append('priority', email.priority); // Send priority
 
     // Append attachments to FormData
-    email.attachments.forEach((file) => {
-      formData.append('attachments', file);
+    email.attachments.forEach(file => {
+      formData.append('attachments', file); // Append each file
     });
 
-    setIsLoading(true); // Set loading state
+    setIsLoading(true);
     try {
       await axios.post('http://localhost:5000/api/send-email', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       onSend(email);
       alert('Email sent successfully!');
-      // Clear the form after sending
-      setEmail({
-        from: defaultSender,
-        to: '',
-        subject: '',
-        body: '',
-        attachments: [],
-      });
+      setEmail({ from: defaultSender, to: '', subject: '', body: '', attachments: [], priority: 1 });
     } catch (error) {
       console.error('Error sending email:', error);
       alert('Failed to send email. Please try again.');
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
     }
   };
 
   return (
     <div>
       <h2>Compose Email</h2>
-      <input
-        type="email"
-        name="from"
-        value={email.from}
-        readOnly
-        placeholder="Sender"
-      />
+      <input type="email" name="from" value={email.from} readOnly placeholder="Sender" />
       <input
         type="text"
         name="to"
@@ -116,8 +98,14 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
         value={email.body}
         onChange={handleChange}
       ></textarea>
+      <select name="priority" value={email.priority} onChange={handleChange}>
+        <option value="1">Priority 1 (High)</option>
+        <option value="2">Priority 2 (Medium)</option>
+        <option value="3">Priority 3 (Low)</option>
+        <option value="4">Priority 4 (None)</option>
+      </select>
 
-      {/* Attachment Section */}
+      {/* Attachment Input */}
       <div>
         <input type="file" multiple onChange={handleAttachment} />
         {email.attachments.length > 0 && (

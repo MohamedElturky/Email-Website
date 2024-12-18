@@ -1,27 +1,25 @@
-import { useState, useEffect } from "react";
-import axios from "axios"; // For API calls
-import ComposeEmail from "./components/ComposeEmail"; // Your email composing component
-import "./styles.css"; // Add your custom styles here
+import { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import ComposeEmail from "./components/ComposeEmail";
+import ContactManager from "./components/ContactManager";
+import "./styles.css";
 
 const App = () => {
-  const [theme, setTheme] = useState("light"); // Theme state
-  const [emails, setEmails] = useState([]); // State to store emails
-  const [currentPage, setCurrentPage] = useState("login"); // Current page (login, register, home, mailbox)
-  const [draggedEmail, setDraggedEmail] = useState(null); // State for drag-and-drop
-  const [user, setUser] = useState(null); // User state (null if not logged in)
-  const [form, setForm] = useState({ username: "", password: "" }); // Form state for login/register
+  const [theme, setTheme] = useState("light");
+  const [emails, setEmails] = useState([]);
+  const [currentPage, setCurrentPage] = useState("login");
+  const [draggedEmail, setDraggedEmail] = useState(null);
+  const [user, setUser] = useState(null);
+  const [form, setForm] = useState({ username: "", password: "" });
 
-  // Toggle between themes
   const toggleTheme = (newTheme) => {
     document.documentElement.setAttribute("data-theme", newTheme);
     setTheme(newTheme);
   };
 
-  // Handle input changes in login/register form
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-
   // Login user
   const loginUser = async () => {
     try {
@@ -79,17 +77,22 @@ const App = () => {
     }
   };
 
-  // Load emails from the backend API
-  const loadEmails = async () => {
+  const loadEmails = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/emails"); // Replace with your backend URL
-      setEmails(response.data); // Update emails with response data
+      if (user) {
+        const response = await axios.get(
+          "http://localhost:5000/api/email/all",
+          {
+            params: { userId: user.id },
+          }
+        );
+        setEmails(response.data);
+      }
     } catch (error) {
       console.error("Error loading emails:", error.message);
     }
-  };
+  }, [user]);
 
-  // Handle drag events
   const handleDragStart = (event, emailId) => {
     setDraggedEmail(emailId);
     event.target.style.opacity = "0.5";
@@ -120,7 +123,6 @@ const App = () => {
     }
   };
 
-  // Delete selected emails
   const deleteSelectedEmails = () => {
     const selectedEmails = document.querySelectorAll(".email-checkbox:checked");
     const selectedIds = Array.from(selectedEmails).map((checkbox) =>
@@ -131,12 +133,11 @@ const App = () => {
     );
     setEmails(filteredEmails);
   };
-
   useEffect(() => {
     if (currentPage === "mailbox") {
       loadEmails();
     }
-  }, [currentPage]);
+  }, [currentPage, loadEmails]);
 
   return (
     <div>
@@ -205,7 +206,6 @@ const App = () => {
             >
               Dark Theme
             </button>
-
             <button
               onClick={() => toggleTheme("colorful")}
               disabled={theme === "colorful"}
@@ -223,6 +223,7 @@ const App = () => {
           <button onClick={() => setCurrentPage("mailbox")}>
             Open Mailbox
           </button>
+          <ContactManager />
         </>
       )}
       {currentPage === "mailbox" && (
