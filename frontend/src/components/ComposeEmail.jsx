@@ -1,30 +1,43 @@
-import { useState } from 'react';
-import PropTypes from 'prop-types';
-import axios from 'axios';
+import { useState } from "react";
+import PropTypes from "prop-types";
+import axios from "axios";
+import { useEffect } from "react";
 
 const ComposeEmail = ({ onSend, defaultSender }) => {
   const [email, setEmail] = useState({
     from: defaultSender,
-    to: '',
-    subject: '',
-    body: '',
+    to: "",
+    subject: "",
+    body: "",
     attachments: [],
     priority: 1, // Default priority
   });
 
-  const [error, setError] = useState('');
+  useEffect(() => {
+    // Retrieve user data from localStorage
+    const user = JSON.parse(localStorage.getItem("user"));
+    const userId = user?.id || null;
+
+    if (userId) {
+      setEmail((prevEmail) => ({ ...prevEmail, from: userId.toString() }));
+    } else {
+      console.error("User ID not found in localStorage");
+    }
+  }, []);
+
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEmail({ ...email, [name]: value });
-    if (name === 'to') setError('');
+    if (name === "to") setError("");
   };
 
   const validateEmails = (emails) => {
-    const emailList = emails.split(',').map(email => email.trim());
+    const emailList = emails.split(",").map((email) => email.trim());
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailList.every(email => emailRegex.test(email));
+    return emailList.every((email) => emailRegex.test(email));
   };
 
   const handleAttachment = (e) => {
@@ -38,36 +51,51 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
   };
 
   const handleSend = async () => {
-    const recipientList = email.to.split(',').map(recipient => recipient.trim());
-
+    // Validate recipient email addresses
+    const recipientList = email.to
+      .split(",")
+      .map((recipient) => recipient.trim());
     if (!validateEmails(email.to)) {
-      setError('One or more recipient emails are invalid. Please check the format.');
+      setError(
+        "One or more recipient emails are invalid. Please check the format."
+      );
       return;
     }
+    console.log("Sender ID (email.from):", email.from);
 
-    const formData = new FormData();
-    formData.append('from', email.from);
-    formData.append('to', recipientList.join(','));
-    formData.append('subject', email.subject);
-    formData.append('body', email.body);
-    formData.append('priority', email.priority); // Send priority
-
-    // Append attachments to FormData
-    email.attachments.forEach(file => {
-      formData.append('attachments', file); // Append each file
-    });
+    // Map data to backend expected format
+    const emailData = {
+      senderId: parseInt(email.from, 10), // Backend expects sender ID as an integer
+      receiversEmailAddresses: recipientList, // Array of recipient emails
+      topic: email.subject, // Subject maps to topic
+      body: email.body, // Body remains the same
+      priority: parseInt(email.priority, 10), // Priority as an integer
+    };
 
     setIsLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/send-email', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      // Send the POST request to the backend
+      await axios.post("http://localhost:8081/api/email", emailData, {
+        headers: { "Content-Type": "application/json" },
       });
+
+      // Success actions
       onSend(email);
-      alert('Email sent successfully!');
-      setEmail({ from: defaultSender, to: '', subject: '', body: '', attachments: [], priority: 1 });
+      alert("Email sent successfully!");
+      setEmail({
+        from: JSON.parse(localStorage.getItem("user"))?.id?.toString() || "",
+        to: "",
+        subject: "",
+        body: "",
+        attachments: [], // Clear attachments
+        priority: 1, // Reset priority to default
+      });
     } catch (error) {
-      console.error('Error sending email:', error);
-      alert('Failed to send email. Please try again.');
+      console.error(
+        "Error sending email:",
+        error.response?.data || error.message
+      );
+      alert("Failed to send email. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +104,9 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
   return (
     <div>
       <h2>Compose Email</h2>
-      <input type="email" name="from" value={email.from} readOnly placeholder="Sender" />
+      <p>
+        <strong>Sender:</strong> Logged-in User
+      </p>
       <input
         type="text"
         name="to"
@@ -84,7 +114,7 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
         value={email.to}
         onChange={handleChange}
       />
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
       <input
         type="text"
         name="subject"
@@ -116,7 +146,7 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
                 <button
                   type="button"
                   onClick={() => handleRemoveAttachment(index)}
-                  style={{ marginLeft: '10px' }}
+                  style={{ marginLeft: "10px" }}
                 >
                   Remove
                 </button>
@@ -127,7 +157,7 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
       </div>
 
       <button onClick={handleSend} disabled={isLoading}>
-        {isLoading ? 'Sending...' : 'Send'}
+        {isLoading ? "Sending..." : "Send"}
       </button>
     </div>
   );

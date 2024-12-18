@@ -33,10 +33,11 @@ const App = () => {
       console.log("Login successful:", response.data);
 
       // Store user data locally (optional)
-      localStorage.setItem("user", JSON.stringify(response.data));
+      const user = response.data;
+      localStorage.setItem("user", JSON.stringify(user));
 
       // Navigate to home page
-      setUser(response.data);
+      setUser(user);
       setCurrentPage("home");
     } catch (error) {
       console.error("Login failed:", error.response?.data || error.message);
