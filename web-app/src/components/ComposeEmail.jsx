@@ -1,149 +1,153 @@
-import React, { useState } from 'react';
-import axios from 'axios'; // Import axios
+import { useState } from 'react';
+import PropTypes from 'prop-types';
+import axios from 'axios';
 
-const ComposeEmail = ({ onSend }) => {
+const ComposeEmail = ({ onSend, defaultSender }) => {
   const [email, setEmail] = useState({
-    from: '', // Added from field
+    from: defaultSender,
     to: '',
     subject: '',
     body: '',
     attachments: [],
   });
 
+  const [error, setError] = useState(''); // State for validation errors
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+
+  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEmail({ ...email, [name]: value });
+    if (name === 'to') setError(''); // Clear error when typing
   };
 
-  // Handle file selection
-  const handleFileChange = (e) => {
+  // Validate email format for multiple recipients
+  const validateEmails = (emails) => {
+    const emailList = emails.split(',').map((email) => email.trim());
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Regex for email validation
+    return emailList.every((email) => emailRegex.test(email)); // Returns true if all emails are valid
+  };
+
+  // Handle file attachment
+  const handleAttachment = (e) => {
     const files = Array.from(e.target.files);
     setEmail({ ...email, attachments: [...email.attachments, ...files] });
   };
 
+  // Remove an attachment
+  const handleRemoveAttachment = (index) => {
+    const updatedAttachments = email.attachments.filter((_, i) => i !== index);
+    setEmail({ ...email, attachments: updatedAttachments });
+  };
+
+  // Handle email send
   const handleSend = async () => {
-    // Prepare FormData to send data as multipart/form-data
+    const recipientList = email.to.split(',').map((recipient) => recipient.trim());
+
+    // Validate the emails
+    if (!validateEmails(email.to)) {
+      setError('One or more recipient emails are invalid. Please check the format.');
+      return;
+    }
+
+    // Create FormData for file upload
     const formData = new FormData();
-    formData.append('from', email.from); // Send the 'from' field
-    formData.append('to', email.to);
+    formData.append('from', email.from);
+    formData.append('to', recipientList.join(',')); // Send recipients as a comma-separated string
     formData.append('subject', email.subject);
     formData.append('body', email.body);
-  
-    // Append all attachments to formData
+
+    // Append attachments to FormData
     email.attachments.forEach((file) => {
       formData.append('attachments', file);
     });
-  
+
+    setIsLoading(true); // Set loading state
     try {
-      // Send the email and attachments to the backend using Axios
-      const response = await axios.post('http://localhost:5000/api/send-email', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data', // Set the content type to handle file uploads
-        },
+      await axios.post('http://localhost:5000/api/send-email', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-  
-      // Handle the response after sending the email
-      if (response.status === 200) {
-        onSend(email); // Notify parent about the sent email
-        alert('Email sent successfully');
-        setEmail({ from: '', to: '', subject: '', body: '', attachments: [] }); // Reset form
-      }
+      onSend(email);
+      alert('Email sent successfully!');
+      // Clear the form after sending
+      setEmail({
+        from: defaultSender,
+        to: '',
+        subject: '',
+        body: '',
+        attachments: [],
+      });
     } catch (error) {
       console.error('Error sending email:', error);
-      alert('Failed to send email');
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setIsLoading(false); // Reset loading state
     }
-  };
-  
-
-  // Remove attachment
-  const removeAttachment = (index) => {
-    const newAttachments = email.attachments.filter((_, i) => i !== index);
-    setEmail({ ...email, attachments: newAttachments });
   };
 
   return (
     <div>
       <h2>Compose Email</h2>
+      <input
+        type="email"
+        name="from"
+        value={email.from}
+        readOnly
+        placeholder="Sender"
+      />
+      <input
+        type="text"
+        name="to"
+        placeholder="Recipients (separate emails with commas)"
+        value={email.to}
+        onChange={handleChange}
+      />
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <input
+        type="text"
+        name="subject"
+        placeholder="Subject"
+        value={email.subject}
+        onChange={handleChange}
+      />
+      <textarea
+        name="body"
+        placeholder="Write your message here"
+        value={email.body}
+        onChange={handleChange}
+      ></textarea>
+
+      {/* Attachment Section */}
       <div>
-        <label htmlFor="from">From:</label>
-        <input
-          type="email"
-          id="from"
-          name="from"
-          placeholder="Your Email"
-          value={email.from}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="to">To:</label>
-        <input
-          type="email"
-          id="to"
-          name="to"
-          placeholder="Recipient's Email"
-          value={email.to}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="subject">Subject:</label>
-        <input
-          type="text"
-          id="subject"
-          name="subject"
-          placeholder="Email Subject"
-          value={email.subject}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div>
-        <label htmlFor="body">Body:</label>
-        <textarea
-          id="body"
-          name="body"
-          placeholder="Write your message here"
-          value={email.body}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      
-      <div>
-        {/* File attachment icon */}
-        <label htmlFor="attachment" className="attachment-icon">
-          <span className="material-icons">attach_file</span>
-        </label>
-        <input
-          id="attachment"
-          type="file"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-        
-        {/* Display selected attachments */}
-        <div>
-          {email.attachments.length > 0 && (
-            <ul>
-              {email.attachments.map((file, index) => (
-                <li key={index}>
-                  {file.name} <button onClick={() => removeAttachment(index)}>Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <input type="file" multiple onChange={handleAttachment} />
+        {email.attachments.length > 0 && (
+          <ul>
+            {email.attachments.map((file, index) => (
+              <li key={index}>
+                {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAttachment(index)}
+                  style={{ marginLeft: '10px' }}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      <button onClick={handleSend} disabled={!email.from || !email.to || !email.subject || !email.body}>
-        Send
+      <button onClick={handleSend} disabled={isLoading}>
+        {isLoading ? 'Sending...' : 'Send'}
       </button>
     </div>
   );
+};
+
+ComposeEmail.propTypes = {
+  onSend: PropTypes.func.isRequired,
+  defaultSender: PropTypes.string.isRequired,
 };
 
 export default ComposeEmail;

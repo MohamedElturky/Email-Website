@@ -11,7 +11,7 @@
 /* Dark Theme */
 [data-theme="dark"] {
   --background-color: #181818;
-  --text-color: #0da2b6;
+  --text-color: #f9f9f9;
   --primary-color: #4caf50;
   --secondary-color: #9e9e9e;
   --button-bg: var(--primary-color);
