@@ -1,11 +1,15 @@
 package edu.alexu.mail.service;
 
+
 import org.springframework.stereotype.Service;
 
 import edu.alexu.mail.model.User;
 import edu.alexu.mail.model.Email;
+import edu.alexu.mail.model.Folder;
 import edu.alexu.mail.repository.EmailRepository;
 import edu.alexu.mail.repository.UserRepository;
+import edu.alexu.mail.repository.FolderRepository;
+
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -13,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
+
 import org.apache.commons.lang3.StringUtils;
 
 @Service
@@ -23,14 +28,17 @@ public class EmailService {
 
     private final EmailRepository emailRepository;
     private final UserRepository userRepository;
+    private final FolderRepository folderRepository;
 
     public EmailService(EmailRepository emailRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        FolderRepository folderRepository) {
         this.emailRepository = emailRepository;
         this.userRepository = userRepository;
+        this.folderRepository = folderRepository;
     }
 
-    private List<Email> getAllEmailsByUserId(int userId) {
+    public List<Email> getAllEmailsByUserId(int userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null) {
             return emailRepository
@@ -158,15 +166,54 @@ public class EmailService {
 
 
     public Email createEmail(Email email) {
-        return emailRepository.save(email);
+        Email sentEmail = emailRepository.save(email);
+        int emailId = sentEmail.getId();
+        int senderId = sentEmail.getSenderId();
+        List<Integer> receiverIds = email.getReceiversEmailAddresses()
+                .stream()
+                .map(receiverEmailAddress -> {
+                    User receiver = userRepository.findByEmailAddress(receiverEmailAddress).orElse(null);
+                    if (receiver != null) {
+                        return receiver.getId();
+                    }
+                    else return null;
+                })
+                .toList();
+        List<Folder> senderFolders = folderRepository.findAllByUserId(senderId);
+
+        // Add sent email to sender's 'Sent' folder.
+        for (Folder folder : senderFolders) {
+            if (folder.getLabel().equalsIgnoreCase("Sent")) {
+                folder.getEmailsIds().add(emailId);
+                folderRepository.save(folder);
+            }
+        }
+
+        // Add received email to receivers' 'Inbox' folder.
+        for (Integer receiverId : receiverIds) {
+            if (receiverId == null) continue;
+            for (Folder folder : folderRepository.findAllByUserId(receiverId)) {
+                if (folder.getLabel().equalsIgnoreCase("Inbox")) {
+                    folder.getEmailsIds().add(emailId);
+                    folderRepository.save(folder);
+                }
+            }
+        }
+
+        return sentEmail;
     }
 
     public Email getEmail(int id) {
         return emailRepository.findById(id).orElse(null);
     }
 
-    public void deleteEmail(int id) {
-        emailRepository.deleteById(id);
+    public void deleteEmail(int userId, Integer emailId) {
+        List<Folder> userFolders = new ArrayList<>(folderRepository.findAllByUserId(userId));
+        for (Folder folder : userFolders) {
+            folder.getEmailsIds().remove(emailId);
+            folderRepository.save(folder);
+        }
+
     }
 
     public List<String> getAttachmentsFileNames(int id) throws IOException {

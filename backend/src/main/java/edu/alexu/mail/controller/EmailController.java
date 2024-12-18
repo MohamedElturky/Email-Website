@@ -90,8 +90,8 @@ public class EmailController {
     }
 
     @DeleteMapping
-    public void deleteEmail(@RequestParam int id) {
-        emailService.deleteEmail(id);
+    public void deleteEmail(@RequestParam int userId, @RequestParam Integer emailId) {
+        emailService.deleteEmail(userId, emailId);
     }
 
     @GetMapping("/attachments")
