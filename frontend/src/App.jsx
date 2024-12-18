@@ -87,15 +87,22 @@ const App = () => {
             params: { userId: user.id },
           }
         );
+        console.log("Email response:", response.data);
 
-        // Map response data to include 'from', 'to', and 'subject'
-        const updatedEmails = response.data.map((email) => ({
-          ...email,
-          from: email.senderId, // You might want to map senderId to a name/email
-          to: email.receiversEmailAddresses.join(", "), // Join receivers if there are multiple
-          subject: email.topic, // Map 'topic' to 'subject'
-        }));
-
+        // Assume `senderId` can be mapped to an actual sender's email, you can add that here
+        const updatedEmails = response.data
+          .map((email) => ({
+            ...email,
+            to: email.receiversEmailAddresses.join(", "), // Combine receivers if there are multiple
+            subject: email.topic, // Map 'topic' to 'subject'
+            body: email.body,
+          }))
+          .sort((a, b) => {
+            // Ensure priority is treated as a number for proper sorting
+            const priorityA = Number(a.priority) || 0;
+            const priorityB = Number(b.priority) || 0;
+            return priorityA - priorityB; // Sort in ascending order (low priority first)
+          });
         setEmails(updatedEmails);
       }
     } catch (error) {
@@ -278,8 +285,8 @@ const App = () => {
                   data-id={email.id}
                 />
                 <strong>Subject:</strong> {email.subject} <br />
-                <strong>From:</strong> {email.sender} <br />
-                <strong>To:</strong> {email.to}
+                <strong>To:</strong> {email.to} <br />
+                <strong>Body:</strong> {email.body} {/* Add this line */}
               </li>
             ))}
           </ul>
