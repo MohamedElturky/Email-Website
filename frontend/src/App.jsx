@@ -82,12 +82,21 @@ const App = () => {
     try {
       if (user) {
         const response = await axios.get(
-          "http://localhost:5000/api/email/all",
+          "http://localhost:8081/api/email/all",
           {
             params: { userId: user.id },
           }
         );
-        setEmails(response.data);
+
+        // Map response data to include 'from', 'to', and 'subject'
+        const updatedEmails = response.data.map((email) => ({
+          ...email,
+          from: email.senderId, // You might want to map senderId to a name/email
+          to: email.receiversEmailAddresses.join(", "), // Join receivers if there are multiple
+          subject: email.topic, // Map 'topic' to 'subject'
+        }));
+
+        setEmails(updatedEmails);
       }
     } catch (error) {
       console.error("Error loading emails:", error.message);
@@ -124,16 +133,34 @@ const App = () => {
     }
   };
 
-  const deleteSelectedEmails = () => {
+  const deleteSelectedEmails = async () => {
+    // Get all the selected checkboxes
     const selectedEmails = document.querySelectorAll(".email-checkbox:checked");
+
+    // Get the IDs of selected emails
     const selectedIds = Array.from(selectedEmails).map((checkbox) =>
       parseInt(checkbox.dataset.id)
     );
-    const filteredEmails = emails.filter(
-      (email) => !selectedIds.includes(email.id)
-    );
-    setEmails(filteredEmails);
+
+    try {
+      // Send DELETE requests to the backend for each selected email
+      for (const id of selectedIds) {
+        await axios.delete("http://localhost:8081/api/email", {
+          params: { id },
+        });
+      }
+
+      // Filter out the deleted emails from the state
+      const filteredEmails = emails.filter(
+        (email) => !selectedIds.includes(email.id)
+      );
+      setEmails(filteredEmails); // Update the state to reflect deleted emails
+    } catch (error) {
+      console.error("Error deleting emails:", error);
+      alert("Failed to delete some emails. Please try again.");
+    }
   };
+
   useEffect(() => {
     if (currentPage === "mailbox") {
       loadEmails();

@@ -1,5 +1,5 @@
-import PropTypes from 'prop-types';
-import EmailItem from './EmailItem';
+import PropTypes from "prop-types";
+import EmailItem from "./EmailItem";
 
 const Mailbox = ({ emails, onDelete }) => (
   <div>
