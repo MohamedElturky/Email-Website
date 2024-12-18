@@ -30,9 +30,14 @@ const App = () => {
         },
       });
 
+      // Check if the response contains user data
+      if (!response.data || !response.data.id) {
+        throw new Error("Invalid login credentials."); // Reject login if user data is missing
+      }
+
       console.log("Login successful:", response.data);
 
-      // Store user data locally (optional)
+      // Store user data locally
       const user = response.data;
       localStorage.setItem("user", JSON.stringify(user));
 
