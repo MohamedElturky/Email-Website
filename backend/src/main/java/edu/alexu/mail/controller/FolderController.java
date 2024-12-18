@@ -43,8 +43,8 @@ public class FolderController {
     }
 
     @PutMapping("/move")
-    public void moveEmail(int emailId, int fromId, int toId) {
-        folderService.moveEmail(emailId, fromId, toId);
+    public void moveEmails(List<Integer> emailIds, int fromId, int toId) {
+        folderService.moveEmails(emailIds, fromId, toId);
     }
 
 }

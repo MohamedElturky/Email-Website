@@ -56,15 +56,17 @@ public class FolderService {
         return folderRepository.findAllByUserId(userId);
     }
 
-    public void moveEmail(int emailId, int fromId, int toId) {
+    public void moveEmails(List<Integer> emailIds, int fromId, int toId) {
         Folder fromFolder = getFolder(fromId);
         Folder toFolder = getFolder(toId);
 
-        fromFolder.getEmailsIds().remove(emailId);
-        toFolder.getEmailsIds().add(emailId);
+        for (Integer emailId : emailIds) {
+            fromFolder.getEmailsIds().remove(emailId);
+            toFolder.getEmailsIds().add(emailId);
 
-        folderRepository.save(fromFolder);
-        folderRepository.save(toFolder);
+            folderRepository.save(fromFolder);
+            folderRepository.save(toFolder);
+        }
     }
 
     @Scheduled(cron = "@midnight")
