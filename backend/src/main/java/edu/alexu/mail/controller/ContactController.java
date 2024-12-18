@@ -17,27 +17,27 @@ public class ContactController {
         this.contactService = contactService;
     }
 
-    @GetMapping("/contacts")
-    public List<Contact> getAllContacts() {
-        return contactService.getAllContacts();
+    @GetMapping("/all")
+    public List<Contact> getAllContacts(int userId) {
+        return contactService.getAllContacts(userId);
     }
 
-    @GetMapping("/contacts/sorted")
-    public List<Contact> getSortedContacts() {
-        return contactService.getContactsSortedLexicographicallyByName();
+    @GetMapping("/all/sorted")
+    public List<Contact> getAllContactsSortedLexicographicallyByName(int userId) {
+        return contactService.getContactsSortedLexicographicallyByName(userId);
     }
 
-    @GetMapping("/contacts/name")
-    public List<Contact> getContactsByName(@RequestParam String name) {
-        return contactService.getContactsByName(name);
+    @GetMapping("/all/name")
+    public List<Contact> getAllContactsByName(@RequestParam int userId, @RequestParam String name) {
+        return contactService.getContactsByName(userId, name);
     }
 
-    @GetMapping("/contacts/email-addresses")
-    public List<Contact> getContactsByEmailAddresses(
-            @RequestParam List<String> emailAddresses) {
-        return contactService.getContactsByEmailAddresses(emailAddresses);
+    @GetMapping("/all/email-addresses")
+    public List<Contact> getAllContactsByEmailAddresses(
+            @RequestParam int userId,
+            @RequestParam List<String> emailAddress) {
+        return contactService.getContactsByEmailAddresses(userId, emailAddress);
     }
-
 
     @GetMapping
     public Contact getContact(int id) {
@@ -55,17 +55,17 @@ public class ContactController {
     }
 
     @PutMapping("/add-email-address")
-    public Contact addContactEmailAddress(int id, String emailAddress) {
-        return contactService.addContactEmailAddress(id, emailAddress);
+    public Contact addEmailAddressToContact(int id, String emailAddress) {
+        return contactService.addEmailAddressToContact(id, emailAddress);
     }
 
-    @PutMapping("/remove-email-address")
-    public Contact deleteContactEmailAddress(int id, String emailAddress) {
-        return contactService.deleteContactEmailAddress(id, emailAddress);
+    @PutMapping("/delete-email-address")
+    public Contact deleteEmailAddressFromContact(int id, String emailAddress) {
+        return contactService.deleteEmailAddressFromContact(id, emailAddress);
     }
 
     @DeleteMapping
-    public void removeContact(int id) {
-        contactService.removeContact(id);
+    public void deleteContact(int id) {
+        contactService.deleteContact(id);
     }
 }

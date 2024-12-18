@@ -1,10 +1,12 @@
 package edu.alexu.mail.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 @Entity
@@ -16,17 +18,19 @@ public class Email {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    private String sender;
+    @JsonProperty("senderId")
+    private int senderId;
 
-    private String receiver;
+    @Column(columnDefinition = "BLOB")
+    private List<String> receiversEmailAddresses;
 
+    @Column(columnDefinition = "TEXT")
     private String topic;
 
+    @Column(columnDefinition = "TEXT")
     private String body;
 
     private int priority;
-
-    private String pathname;
 
     @CreatedDate
     private LocalDateTime creationDateTime;
@@ -35,12 +39,12 @@ public class Email {
         return id;
     }
 
-    public String getSender() {
-        return sender;
+    public int getSenderId() {
+        return senderId;
     }
 
-    public String getReceiver() {
-        return receiver;
+    public List<String> getReceiversEmailAddresses() {
+        return receiversEmailAddresses;
     }
 
     public String getTopic() {
@@ -55,10 +59,6 @@ public class Email {
         return priority;
     }
 
-    public String getPathname() {
-        return pathname;
-    }
-
     public LocalDateTime getCreationDateTime() {
         return creationDateTime;
     }
@@ -67,12 +67,12 @@ public class Email {
         this.id = id;
     }
 
-    public void setSender(String sender) {
-        this.sender = sender;
+    public void setSenderId(int senderId) {
+        this.senderId = senderId;
     }
 
-    public void setReceiver(String receiver) {
-        this.receiver = receiver;
+    public void setReceiversEmailAddresses(List<String> receiversEmailAddresses) {
+        this.receiversEmailAddresses = receiversEmailAddresses;
     }
 
     public void setTopic(String topic) {
@@ -85,13 +85,5 @@ public class Email {
 
     public void setPriority(int priority) {
         this.priority = priority;
-    }
-
-    public void setPathname(String pathname) {
-        this.pathname = pathname;
-    }
-
-    public void setCreationDateTime(LocalDateTime creationDateTime) {
-        this.creationDateTime = creationDateTime;
     }
 }

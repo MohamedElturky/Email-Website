@@ -1,9 +1,11 @@
 package edu.alexu.mail.service;
 
-import edu.alexu.mail.model.Email;
-import edu.alexu.mail.repository.*;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import edu.alexu.mail.model.User;
+import edu.alexu.mail.model.Email;
+import edu.alexu.mail.repository.EmailRepository;
+import edu.alexu.mail.repository.UserRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,7 +13,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 @Service
@@ -21,91 +22,126 @@ public class EmailService {
 
 
     private final EmailRepository emailRepository;
+    private final UserRepository userRepository;
 
-    public EmailService(EmailRepository emailRepository) {
+    public EmailService(EmailRepository emailRepository,
+                        UserRepository userRepository) {
         this.emailRepository = emailRepository;
+        this.userRepository = userRepository;
     }
 
-    public List<Email> getEmailsSortedByDate() {
-        List<Email> emails = emailRepository.findAll();
+    private List<Email> getAllEmailsByUserId(int userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            return emailRepository
+                    .findAll()
+                    .stream()
+                    .filter(email -> email.getSenderId() == userId
+                            || email.getReceiversEmailAddresses().contains(user.getEmailAddress()))
+                    .toList();
+        }
+        else {
+            throw new RuntimeException("User not found");
+        }
+    }
+
+    public List<Email> getAllEmailsSortedByDate(int userId) {
+        List<Email> emails = new ArrayList<>(getAllEmailsByUserId(userId));
         emails.sort(Comparator.comparing(Email::getCreationDateTime));
         return emails;
     }
 
-    public List<Email> getEmailsOnAndAfter(LocalDateTime dateTime) {
-        return emailRepository
-                .findAll()
-                .stream()
-                .filter(email -> email.getCreationDateTime().isAfter(dateTime)
-                                    || email.getCreationDateTime().isEqual(dateTime))
-                .collect(Collectors.toList());
-    }
-
-    public List<Email> getEmailsOnAndBefore(LocalDateTime dateTime) {
-        return emailRepository
-                .findAll()
-                .stream()
-                .filter(email -> email.getCreationDateTime().isBefore(dateTime)
-                                    || email.getCreationDateTime().isEqual(dateTime))
-                .collect(Collectors.toList());
-    }
-
-    public List<Email> getEmailsOnAndBetween(LocalDateTime startDateTime, LocalDateTime endDateTime) {
-        return emailRepository
-                .findAll()
-                .stream()
-                .filter(email ->
-                                (email.getCreationDateTime().isAfter(startDateTime)
-                                        || email.getCreationDateTime().isEqual(startDateTime))
-                                && (email.getCreationDateTime().isBefore(endDateTime)
-                                        || email.getCreationDateTime().isEqual(endDateTime)))
-                .collect(Collectors.toList());
-    }
-
-    public List<Email> getEmailsSortedByPriority() {
-        List<Email> emails = emailRepository.findAll();
+    public List<Email> getAllEmailsSortedByPriority(int userId) {
+        List<Email> emails = new ArrayList<>(getAllEmailsByUserId(userId));
         emails.sort(Comparator.comparingInt(Email::getPriority));
         return emails;
     }
 
-
-
-    public List<Email> getEmailsByReceivers(List<String> receivers) {
-        return emailRepository
-                .findAll()
+    public List<Email> getAllEmailsOnAndAfter(int userId, LocalDateTime dateTime) {
+        List<Email> emails = getAllEmailsByUserId(userId);
+        return emails
                 .stream()
-                .filter(email -> receivers.contains(email.getReceiver()))
-                .collect(Collectors.toList());
+                .filter(email -> !email.getCreationDateTime().isBefore(dateTime))
+                .toList();
     }
 
-    public List<Email> getEmailsBySender(String sender) {
-        return emailRepository
-                .findAll()
+    public List<Email> getAllEmailsOnAndBefore(int userId, LocalDateTime dateTime) {
+        List<Email> emails = getAllEmailsByUserId(userId);
+        return emails
                 .stream()
-                .filter(email -> email.getSender().equalsIgnoreCase(sender))
-                .collect(Collectors.toList());
+                .filter(email -> !email.getCreationDateTime().isAfter(dateTime))
+                .toList();
     }
 
-    public List<Email> getEmailsByTopic(String topic) {
-        return emailRepository
-                .findAll()
+    public List<Email> getAllEmailsOnAndBetween(int userId, LocalDateTime startDateTime,
+                                                LocalDateTime endDateTime) {
+        if (startDateTime.isAfter(endDateTime)) {
+            throw new RuntimeException("Start date cannot be after end date");
+        }
+        List<Email> emails = getAllEmailsByUserId(userId);
+        return emails
+                .stream()
+                .filter(email ->
+                                !email.getCreationDateTime().isBefore(startDateTime) &&
+                                !email.getCreationDateTime().isAfter(endDateTime))
+                .toList();
+    }
+
+    public List<Email> getAllEmailsByReceivers(int userId, List<String> receiversEmailAddresses) {
+        List<Email> emails = emailRepository.findAllBySenderId(userId);
+
+        return emails
+                .stream()
+                .filter(email -> !Collections.disjoint(email.getReceiversEmailAddresses(),
+                        receiversEmailAddresses))
+                .toList();
+    }
+
+    public List<Email> getAllEmailsBySender(int userId, String sender) {
+
+        User user = userRepository.findById(userId).orElse(null);
+        User sndr = userRepository.findByEmailAddress(sender).orElse(null);
+
+        if (user != null && sndr != null) {
+            List<Email> receivedEmails = emailRepository
+                    .findAll()
+                    .stream()
+                    .filter(email -> email.getReceiversEmailAddresses().contains(user.getEmailAddress()))
+                    .toList();
+
+            return receivedEmails
+                    .stream()
+                    .filter(email -> email.getSenderId() == sndr.getId())
+                    .toList();
+        }
+        else if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+        else {
+            throw new RuntimeException("Sender not found");
+        }
+    }
+
+    public List<Email> getAllEmailsByTopic(int userId, String topic) {
+        List<Email> emails = getAllEmailsByUserId(userId);
+        return emails
                 .stream()
                 .filter(email -> email.getTopic().equalsIgnoreCase(topic))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    public List<Email> getEmailsByBody(String body) {
-        return emailRepository
-                .findAll()
+    public List<Email> getAllEmailsByBody(int userId, String body) {
+        List<Email> emails = getAllEmailsByUserId(userId);
+        return emails
                 .stream()
                 .filter(email -> StringUtils.containsIgnoreCase(
                         email.getBody(), body))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    public List<Email> getEmailByAttachments(List<String> attachments) {
-        return emailRepository
-                .findAll()
+    public List<Email> getAllEmailsByAttachments(int userId, List<String> attachments) {
+        List<Email> emails = getAllEmailsByUserId(userId);
+        return emails
                 .stream()
                 .filter(email -> {
                     try {
@@ -117,7 +153,7 @@ public class EmailService {
                         return false;
                     }
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
 
@@ -133,33 +169,11 @@ public class EmailService {
         emailRepository.deleteById(id);
     }
 
-    public void moveEmail(int id, String newPath) {
-        Optional<Email> email = emailRepository.findById(id);
-        if (email.isPresent()) {
-            email.get().setPathname(newPath);
-        }
-        else {
-            throw new RuntimeException("Email not found");
-        }
-    }
-
     public List<String> getAttachmentsFileNames(int id) throws IOException {
         Path directory = Paths.get(cdn + "\\" + id);
         return Files
                 .walk(directory)
                 .map(path -> path.getFileName().toString())
                 .toList();
-    }
-
-    @Scheduled(cron = "@midnight")
-    private void clearTrashFolder() {
-        emailRepository
-                .findAll()
-                .forEach(email -> {
-                    if (email.getPathname().equals("/Trash")
-                            && LocalDateTime.now().minusDays(30).isAfter(email.getCreationDateTime())) {
-                        emailRepository.delete(email);
-                    }
-                });
     }
 }

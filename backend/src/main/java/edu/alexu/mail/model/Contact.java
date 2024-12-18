@@ -12,13 +12,20 @@ public class Contact {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
-    @Column(name = "contact_name")
+    private int userId;
+
+    @Column(name = "contact_name", columnDefinition = "TEXT")
     private String name;
 
+    @Column(columnDefinition = "BLOB")
     private List<String> emailAddresses;
 
     public int getId() {
         return id;
+    }
+
+    public int getUserId() {
+        return userId;
     }
 
     public String getName() {
@@ -31,6 +38,10 @@ public class Contact {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public void setUserId(int userId) {
+        this.userId = userId;
     }
 
     public void setName(String name) {

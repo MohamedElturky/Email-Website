@@ -2,6 +2,7 @@ package edu.alexu.mail.service;
 
 import edu.alexu.mail.model.Folder;
 import edu.alexu.mail.repository.FolderRepository;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,8 +21,20 @@ public class FolderService {
         return folderRepository.save(folder);
     }
 
-    public void removeFolder(int id) {
-        folderRepository.deleteById(id);
+    public void deleteFolder(int id) {
+        Folder folder = folderRepository.findById(id).orElse(null);
+
+        if (folder != null) {
+            if (Folder.defaultFolders.contains(folder.getLabel())) {
+                throw new RuntimeException("Can't delete default folder");
+            }
+            else {
+                folderRepository.deleteById(id);
+            }
+        }
+        else {
+            throw new RuntimeException("Folder not found");
+        }
     }
 
     public Folder renameFolder(int id, String newLabel) {
@@ -35,11 +48,30 @@ public class FolderService {
         }
     }
 
-    public Folder getFolderById(int id) {
+    public Folder getFolder(int id) {
         return folderRepository.findById(id).orElse(null);
     }
 
-    public List<Folder> getAllFolders() {
-        return folderRepository.findAll();
+    public List<Folder> getAllFolders(int userId) {
+        return folderRepository.findAllByUserId(userId);
+    }
+
+    public void moveEmail(int emailId, int fromId, int toId) {
+        Folder fromFolder = getFolder(fromId);
+        Folder toFolder = getFolder(toId);
+
+        fromFolder.getEmailsIds().remove(emailId);
+        toFolder.getEmailsIds().add(emailId);
+
+        folderRepository.save(fromFolder);
+        folderRepository.save(toFolder);
+    }
+
+    @Scheduled(cron = "@midnight")
+    private void clearTrashFolder() {
+        List<Folder> trashFolders = folderRepository.findAllByLabel("Trash");
+        for (Folder folder : trashFolders) {
+            folder.empty();
+        }
     }
 }

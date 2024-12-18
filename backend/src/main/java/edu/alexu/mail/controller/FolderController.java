@@ -8,7 +8,7 @@ import java.util.List;
 
 @CrossOrigin
 @RestController
-@RequestMapping("/api/email")
+@RequestMapping("/api/folder")
 public class FolderController {
 
     private final FolderService folderService;
@@ -17,29 +17,34 @@ public class FolderController {
         this.folderService = folderService;
     }
 
-    @PostMapping("/folder")
+    @PostMapping
     public Folder addFolder(@RequestBody Folder folder) {
         return folderService.addFolder(folder);
     }
 
-    @DeleteMapping("/folder")
+    @DeleteMapping
     public void removeFolder(@RequestParam int id) {
-        folderService.removeFolder(id);
+        folderService.deleteFolder(id);
     }
 
-    @PutMapping("/folder")
-    public Folder renameFolder(@RequestParam int id, @RequestParam String name) {
-        return folderService.renameFolder(id, name);
+    @PutMapping
+    public Folder renameFolder(@RequestParam int id, @RequestParam String label) {
+        return folderService.renameFolder(id, label);
     }
 
-    @GetMapping("/folder")
-    public Folder getFolder(@RequestParam int id) {
-        return folderService.getFolderById(id);
+    @GetMapping
+    public Folder getFolderById(@RequestParam int id) {
+        return folderService.getFolder(id);
     }
 
-    @GetMapping("/folders")
-    public List<Folder> getAllFolders() {
-        return folderService.getAllFolders();
+    @GetMapping("/all")
+    public List<Folder> getAllFoldersByUserId(@RequestParam int userId) {
+        return folderService.getAllFolders(userId);
+    }
+
+    @PutMapping("/move")
+    public void moveEmail(int emailId, int fromId, int toId) {
+        folderService.moveEmail(emailId, fromId, toId);
     }
 
 }

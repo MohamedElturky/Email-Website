@@ -18,27 +18,27 @@ public class ContactService {
         this.contactRepository = contactRepository;
     }
 
-    public List<Contact> getAllContacts() {
-        return contactRepository.findAll();
+    public List<Contact> getAllContacts(int userId) {
+        return contactRepository.findAllByUserId(userId);
     }
 
-    public List<Contact> getContactsSortedLexicographicallyByName() {
-        List<Contact> contacts = contactRepository.findAll();
+    public List<Contact> getContactsSortedLexicographicallyByName(int userId) {
+        List<Contact> contacts = contactRepository.findAllByUserId(userId);
         contacts.sort(Comparator.comparing(Contact::getName));
         return contacts;
     }
 
-    public List<Contact> getContactsByName(String name) {
+    public List<Contact> getContactsByName(int userId, String name) {
         return contactRepository
-                .findAll()
+                .findAllByUserId(userId)
                 .stream()
                 .filter(contact -> contact.getName().equalsIgnoreCase(name))
                 .collect(Collectors.toList());
     }
 
-    public List<Contact> getContactsByEmailAddresses(List<String> emailAddresses) {
+    public List<Contact> getContactsByEmailAddresses(int userId, List<String> emailAddresses) {
         return contactRepository
-                .findAll()
+                .findAllByUserId(userId)
                 .stream()
                 .filter(contact -> !Collections.disjoint(
                         contact.getEmailAddresses(), emailAddresses))
@@ -57,7 +57,7 @@ public class ContactService {
         return contactRepository.save(contact);
     }
 
-    public void removeContact(int id) {
+    public void deleteContact(int id) {
         contactRepository.deleteById(id);
     }
 
@@ -73,7 +73,7 @@ public class ContactService {
         }
     }
 
-    public Contact addContactEmailAddress(int id, String emailAddress) {
+    public Contact addEmailAddressToContact(int id, String emailAddress) {
         Contact contact = contactRepository.findById(id).orElse(null);
         if (contact != null) {
             contact.getEmailAddresses().add(emailAddress);
@@ -84,7 +84,7 @@ public class ContactService {
         }
     }
 
-    public Contact deleteContactEmailAddress(int id, String emailAddress) {
+    public Contact deleteEmailAddressFromContact(int id, String emailAddress) {
         Contact contact = contactRepository.findById(id).orElse(null);
         if (contact != null) {
             contact.getEmailAddresses().remove(emailAddress);
