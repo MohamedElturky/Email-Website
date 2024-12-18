@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios'; // For API calls
-import ComposeEmail from './components/ComposeEmail'; // Your email composing component
-import './styles.css'; // Add your custom styles here
+import { useState, useEffect } from "react";
+import axios from "axios"; // For API calls
+import ComposeEmail from "./components/ComposeEmail"; // Your email composing component
+import "./styles.css"; // Add your custom styles here
 
 const App = () => {
-  const [theme, setTheme] = useState('light'); // Theme state
+  const [theme, setTheme] = useState("light"); // Theme state
   const [emails, setEmails] = useState([]); // State to store emails
-  const [currentPage, setCurrentPage] = useState('login'); // Current page (login, register, home, mailbox)
+  const [currentPage, setCurrentPage] = useState("login"); // Current page (login, register, home, mailbox)
   const [draggedEmail, setDraggedEmail] = useState(null); // State for drag-and-drop
   const [user, setUser] = useState(null); // User state (null if not logged in)
-  const [form, setForm] = useState({ username: '', password: '' }); // Form state for login/register
+  const [form, setForm] = useState({ username: "", password: "" }); // Form state for login/register
 
   // Toggle between themes
   const toggleTheme = (newTheme) => {
-    document.documentElement.setAttribute('data-theme', newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme);
     setTheme(newTheme);
   };
 
@@ -25,44 +25,79 @@ const App = () => {
   // Login user
   const loginUser = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/login', form); // Replace with your backend URL
-      setUser(response.data.user); // Set the logged-in user
-      setCurrentPage('home'); // Redirect to home page
+      const response = await axios.get("http://localhost:8081/api/user/auth", {
+        params: {
+          emailAddress: form.email,
+          password: form.password,
+        },
+      });
+
+      console.log("Login successful:", response.data);
+
+      // Store user data locally (optional)
+      localStorage.setItem("user", JSON.stringify(response.data));
+
+      // Navigate to home page
+      setUser(response.data);
+      setCurrentPage("home");
     } catch (error) {
-      console.error('Login failed:', error.message);
+      console.error("Login failed:", error.response?.data || error.message);
+      alert("Login failed. Please check your email and password.");
     }
   };
 
   // Register user
   const registerUser = async () => {
     try {
-      await axios.post('http://localhost:5000/api/register', form); // Replace with your backend URL
-      alert('Registration successful. Please log in.');
-      setCurrentPage('login'); // Redirect to login page after registration
+      // Use axios to send a POST request with query parameters
+      const response = await axios.post(
+        "http://localhost:8081/api/user/register",
+        null,
+        {
+          params: {
+            emailAddress: form.email, // Assuming form contains `email` and `password` fields
+            password: form.password,
+          },
+        }
+      );
+      console.log("Registration successful:", response.data);
+
+      // Display success message
+      alert(
+        `Registration successful for ${response.data.emailAddress}. Please log in.`
+      );
+
+      // Redirect to login page
+      setCurrentPage("login");
     } catch (error) {
-      console.error('Registration failed:', error.message);
+      // Handle errors
+      console.error(
+        "Registration failed:",
+        error.response?.data || error.message
+      );
+      alert("Registration failed. Please try again.");
     }
   };
 
   // Load emails from the backend API
   const loadEmails = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/emails'); // Replace with your backend URL
+      const response = await axios.get("http://localhost:5000/api/emails"); // Replace with your backend URL
       setEmails(response.data); // Update emails with response data
     } catch (error) {
-      console.error('Error loading emails:', error.message);
+      console.error("Error loading emails:", error.message);
     }
   };
 
   // Handle drag events
   const handleDragStart = (event, emailId) => {
     setDraggedEmail(emailId);
-    event.target.style.opacity = '0.5';
+    event.target.style.opacity = "0.5";
   };
 
   const handleDragEnd = (event) => {
     setDraggedEmail(null);
-    event.target.style.opacity = '1';
+    event.target.style.opacity = "1";
   };
 
   const handleDragOver = (event) => {
@@ -73,8 +108,12 @@ const App = () => {
     event.preventDefault();
     if (draggedEmail !== targetEmailId) {
       const reorderedEmails = [...emails];
-      const draggedIndex = reorderedEmails.findIndex((email) => email.id === draggedEmail);
-      const targetIndex = reorderedEmails.findIndex((email) => email.id === targetEmailId);
+      const draggedIndex = reorderedEmails.findIndex(
+        (email) => email.id === draggedEmail
+      );
+      const targetIndex = reorderedEmails.findIndex(
+        (email) => email.id === targetEmailId
+      );
       const [draggedEmailObj] = reorderedEmails.splice(draggedIndex, 1);
       reorderedEmails.splice(targetIndex, 0, draggedEmailObj);
       setEmails(reorderedEmails);
@@ -83,28 +122,32 @@ const App = () => {
 
   // Delete selected emails
   const deleteSelectedEmails = () => {
-    const selectedEmails = document.querySelectorAll('.email-checkbox:checked');
-    const selectedIds = Array.from(selectedEmails).map((checkbox) => parseInt(checkbox.dataset.id));
-    const filteredEmails = emails.filter((email) => !selectedIds.includes(email.id));
+    const selectedEmails = document.querySelectorAll(".email-checkbox:checked");
+    const selectedIds = Array.from(selectedEmails).map((checkbox) =>
+      parseInt(checkbox.dataset.id)
+    );
+    const filteredEmails = emails.filter(
+      (email) => !selectedIds.includes(email.id)
+    );
     setEmails(filteredEmails);
   };
 
   useEffect(() => {
-    if (currentPage === 'mailbox') {
+    if (currentPage === "mailbox") {
       loadEmails();
     }
   }, [currentPage]);
 
   return (
     <div>
-      {currentPage === 'login' && (
+      {currentPage === "login" && (
         <div>
           <h2>Login</h2>
           <input
             type="text"
-            name="username"
-            placeholder="Username"
-            value={form.username}
+            name="email"
+            placeholder="Email"
+            value={form.email}
             onChange={handleInputChange}
           />
           <input
@@ -116,19 +159,19 @@ const App = () => {
           />
           <button onClick={loginUser}>Login</button>
           <p>
-            Don&apos;t have an account?{' '}
-            <button onClick={() => setCurrentPage('register')}>Register</button>
+            Don&apos;t have an account?{" "}
+            <button onClick={() => setCurrentPage("register")}>Register</button>
           </p>
         </div>
       )}
-      {currentPage === 'register' && (
+      {currentPage === "register" && (
         <div>
           <h2>Register</h2>
           <input
             type="text"
-            name="username"
-            placeholder="Username"
-            value={form.username}
+            name="email"
+            placeholder="Email"
+            value={form.email}
             onChange={handleInputChange}
           />
           <input
@@ -140,25 +183,34 @@ const App = () => {
           />
           <button onClick={registerUser}>Register</button>
           <p>
-            Already have an account?{' '}
-            <button onClick={() => setCurrentPage('login')}>Login</button>
+            Already have an account?{" "}
+            <button onClick={() => setCurrentPage("login")}>Login</button>
           </p>
         </div>
       )}
-      {currentPage === 'home' && (
+      {currentPage === "home" && (
         <>
           <header>
             <h1>Email Application</h1>
             {user && <p>Welcome, {user.username}!</p>}
-            <button onClick={() => toggleTheme('light')} disabled={theme === 'light'}>
+            <button
+              onClick={() => toggleTheme("light")}
+              disabled={theme === "light"}
+            >
               Light Theme
             </button>
-            <button onClick={() => toggleTheme('dark')} disabled={theme === 'dark'}>
+            <button
+              onClick={() => toggleTheme("dark")}
+              disabled={theme === "dark"}
+            >
               Dark Theme
             </button>
-            
-            <button onClick={() => toggleTheme('colorful')} disabled={theme === 'colorful'}>
-               Colorful Theme
+
+            <button
+              onClick={() => toggleTheme("colorful")}
+              disabled={theme === "colorful"}
+            >
+              Colorful Theme
             </button>
           </header>
 
@@ -166,17 +218,19 @@ const App = () => {
             onSend={(email) => {
               setEmails([...emails, email]);
             }}
-            defaultSender={user?.email || ''}
+            defaultSender={user?.email || ""}
           />
-          <button onClick={() => setCurrentPage('mailbox')}>Open Mailbox</button>
+          <button onClick={() => setCurrentPage("mailbox")}>
+            Open Mailbox
+          </button>
         </>
       )}
-      {currentPage === 'mailbox' && (
+      {currentPage === "mailbox" && (
         <div>
           <header>
             <h2>Your Mailbox</h2>
           </header>
-          <button onClick={() => setCurrentPage('home')}>Back to Home</button>
+          <button onClick={() => setCurrentPage("home")}>Back to Home</button>
           <button onClick={loadEmails}>Refresh</button>
           <button onClick={deleteSelectedEmails}>Delete Selected</button>
           <ul id="emails-list">
@@ -189,7 +243,11 @@ const App = () => {
                 onDrop={(e) => handleDrop(e, email.id)}
                 onDragEnd={handleDragEnd}
               >
-                <input type="checkbox" className="email-checkbox" data-id={email.id} />
+                <input
+                  type="checkbox"
+                  className="email-checkbox"
+                  data-id={email.id}
+                />
                 <strong>Subject:</strong> {email.subject} <br />
                 <strong>From:</strong> {email.sender} <br />
                 <strong>To:</strong> {email.to}
