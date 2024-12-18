@@ -1,5 +1,6 @@
 package edu.alexu.mail.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -23,6 +24,7 @@ public class User {
         return emailAddress;
     }
 
+    @JsonIgnore
     public String getHashedPassword() {
         return hashedPassword;
     }
