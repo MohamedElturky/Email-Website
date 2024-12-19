@@ -104,9 +104,6 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
   return (
     <div>
       <h2>Compose Email</h2>
-      <p>
-        <strong>Sender:</strong> Logged-in User
-      </p>
       <input
         type="text"
         name="to"
