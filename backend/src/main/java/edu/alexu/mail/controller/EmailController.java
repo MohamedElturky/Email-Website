@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.*;
 import edu.alexu.mail.model.Email;
 import edu.alexu.mail.service.EmailService;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -93,11 +92,6 @@ public class EmailController {
     @DeleteMapping
     public void deleteEmail(@RequestParam int userId, @RequestParam Integer emailId) {
         emailService.deleteEmail(userId, emailId);
-    }
-
-    @GetMapping("/attachments")
-    public List<String> getAttachmentsFileNames(@RequestParam int id) throws IOException {
-        return emailService.getAttachmentsFileNames(id);
     }
 
 }

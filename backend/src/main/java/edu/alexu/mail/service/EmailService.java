@@ -23,19 +23,20 @@ import org.apache.commons.lang3.StringUtils;
 @Service
 public class EmailService {
 
-    private final String cdn = System.getenv("cdn");
-
 
     private final EmailRepository emailRepository;
     private final UserRepository userRepository;
     private final FolderRepository folderRepository;
+    private final AttachmentService attachmentService;
 
     public EmailService(EmailRepository emailRepository,
                         UserRepository userRepository,
-                        FolderRepository folderRepository) {
+                        FolderRepository folderRepository,
+                        AttachmentService attachmentService) {
         this.emailRepository = emailRepository;
         this.userRepository = userRepository;
         this.folderRepository = folderRepository;
+        this.attachmentService = attachmentService;
     }
 
     public List<Email> getAllEmailsByUserId(int userId) {
@@ -167,8 +168,8 @@ public class EmailService {
                 .stream()
                 .filter(email -> {
                     try {
-                        return !Collections.disjoint(getAttachmentsFileNames(email.getId()),
-                                            attachments);
+                        return !Collections.disjoint(attachmentService.
+                                        getAttachmentsFileNames(email.getId()), attachments);
                     }
                     catch (IOException e) {
                         System.out.println(e.getMessage());
@@ -229,13 +230,4 @@ public class EmailService {
         }
 
     }
-
-    public List<String> getAttachmentsFileNames(int id) throws IOException {
-        Path directory = Paths.get(cdn + "\\" + id);
-        return Files
-                .walk(directory)
-                .map(path -> path.getFileName().toString())
-                .toList();
-    }
-
 }
