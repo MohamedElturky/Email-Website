@@ -84,13 +84,12 @@ const Mailbox = ({ user }) => {
     }
   };
 
-  // Rename a folder
   const renameFolder = async (folderId, newLabel) => {
     try {
-      await axios.put("http://localhost:8081/api/folder/rename", {
-        folderId,
-        label: newLabel,
-      });
+      // Pass folderId and newLabel as query parameters in the URL
+      await axios.put(
+        `http://localhost:8081/api/folder?id=${folderId}&label=${newLabel}`
+      );
       setFolders(
         folders.map((folder) =>
           folder.id === folderId ? { ...folder, label: newLabel } : folder
