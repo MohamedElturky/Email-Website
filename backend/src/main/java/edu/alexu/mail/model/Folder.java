@@ -2,6 +2,7 @@ package edu.alexu.mail.model;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -22,9 +23,12 @@ public class Folder {
     @Column(columnDefinition = "BLOB")
     private List<Integer> emailsIds;
 
-    public Folder() {}
+    public Folder() {
+        this.emailsIds = new ArrayList<>();
+    }
 
     public Folder(String label, int userId) {
+        this();
         this.label = label;
         this.userId = userId;
     }
@@ -63,6 +67,6 @@ public class Folder {
     }
 
     public void empty() {
-        emailsIds = null;
+        emailsIds.clear();
     }
 }
