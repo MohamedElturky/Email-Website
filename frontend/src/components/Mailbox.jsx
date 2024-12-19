@@ -1,58 +1,167 @@
 import PropTypes from "prop-types";
 import { useState, useEffect } from "react";
+import axios from "axios";
 import EmailItem from "./EmailItem";
 
-const Mailbox = ({ emails, onDelete, onFolderChange }) => {
+const Mailbox = ({ user }) => {
+  const [emails, setEmails] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [currentFolder, setCurrentFolder] = useState("Inbox");
-  const [sortOrder, setSortOrder] = useState("default"); // Added state for sorting
+  const [sortOrder, setSortOrder] = useState("default");
 
+  // Fetch folders on component mount or when user changes
   useEffect(() => {
-    // Automatically load emails for the default folder (Inbox) on mount
-    onFolderChange(currentFolder, sortOrder);
-  }, [currentFolder, onFolderChange, sortOrder]);
+    const fetchFolders = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8081/api/folder/all",
+          {
+            params: { userId: user.id },
+          }
+        );
+        setFolders(response.data);
+      } catch (error) {
+        console.error("Error fetching folders:", error.message);
+        alert("Failed to load folders. Please try again.");
+      }
+    };
 
-  const handleFolderClick = (folderName) => {
-    setCurrentFolder(folderName); // Update the current folder state
+    if (user) fetchFolders();
+  }, [user]);
+
+  // Fetch emails for the selected folder
+  const fetchEmails = async (folderName, sortOrder) => {
+    try {
+      const selectedFolder = folders.find(
+        (folder) => folder.label.toLowerCase() === folderName.toLowerCase()
+      );
+      if (!selectedFolder) throw new Error(`Folder '${folderName}' not found.`);
+
+      const response = await axios.get(
+        `http://localhost:8081/api/email/folder/${sortOrder}`,
+        { params: { folderId: selectedFolder.id } }
+      );
+      setEmails(response.data);
+    } catch (error) {
+      console.error(
+        `Error fetching emails for folder '${folderName}':`,
+        error.message
+      );
+      alert(`Failed to load emails for '${folderName}'.`);
+    }
   };
 
+  // Handle folder click
+  const handleFolderClick = (folderName) => {
+    if (folderName !== currentFolder) {
+      setCurrentFolder(folderName);
+      fetchEmails(folderName, sortOrder);
+    }
+  };
+
+  // Handle sorting change
   const handleSortChange = (event) => {
     const newSortOrder = event.target.value;
-    setSortOrder(newSortOrder); // Update the sort order based on dropdown
+    setSortOrder(newSortOrder);
+    fetchEmails(currentFolder, newSortOrder);
+  };
+
+  // Add a new folder
+  const addFolder = async (folderName) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:8081/api/folder", // Updated endpoint
+        {
+          userId: user.id,
+          label: folderName,
+        }
+      );
+      setFolders((prevFolders) => [...prevFolders, response.data]);
+      alert(`Folder "${folderName}" added successfully!`);
+    } catch (error) {
+      console.error("Error adding folder:", error.message);
+      alert("Failed to add folder. Please try again.");
+    }
+  };
+
+  // Rename a folder
+  const renameFolder = async (folderId, newLabel) => {
+    try {
+      await axios.put("http://localhost:8081/api/folder/rename", {
+        folderId,
+        label: newLabel,
+      });
+      setFolders(
+        folders.map((folder) =>
+          folder.id === folderId ? { ...folder, label: newLabel } : folder
+        )
+      );
+      alert(`Folder renamed to "${newLabel}" successfully!`);
+    } catch (error) {
+      console.error("Error renaming folder:", error.message);
+      alert("Failed to rename folder. Please try again.");
+    }
+  };
+
+  // Delete a folder
+  const deleteFolder = async (folderId) => {
+    try {
+      await axios.delete(`http://localhost:8081/api/folder`, {
+        params: { id: folderId }, // Use the correct parameter name: 'id'
+      });
+      setFolders(folders.filter((folder) => folder.id !== folderId));
+      alert("Folder deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting folder:", error.message);
+      alert("Failed to delete folder. Please try again.");
+    }
   };
 
   return (
     <div>
       <div className="folder-list">
-        {/* Display the default folders */}
-        {["Inbox", "Trash", "Draft", "Sent"].map((folderName) => (
+        {/* Render all folders */}
+        {folders.map((folder) => (
           <button
-            key={folderName}
-            onClick={() => handleFolderClick(folderName)}
-            className={currentFolder === folderName ? "active" : ""}
+            key={folder.id}
+            onClick={() => handleFolderClick(folder.label)}
+            className={currentFolder === folder.label ? "active" : ""}
           >
-            {folderName}
+            {/* Check if the folder is one of the default folders */}
+            {["Inbox", "Trash", "Draft", "Sent"].includes(folder.label) ? (
+              folder.label
+            ) : (
+              <>
+                {folder.label} (ID: {folder.id})
+              </>
+            )}
           </button>
         ))}
 
-        {/* Buttons for adding, renaming, and deleting folders */}
+        {/* Folder management buttons */}
         <div className="user-folder-actions">
           <button
             onClick={() => {
-              /* handle adding folder later */
+              const folderName = prompt("Enter the name of the new folder:");
+              if (folderName) addFolder(folderName);
             }}
           >
             Add Folder
           </button>
           <button
             onClick={() => {
-              /* handle renaming folder later */
+              const folderId = prompt("Enter the ID of the folder to rename:");
+              const newLabel = prompt("Enter the new name for the folder:");
+              if (folderId && newLabel)
+                renameFolder(Number(folderId), newLabel);
             }}
           >
             Rename Folder
           </button>
           <button
             onClick={() => {
-              /* handle deleting folder later */
+              const folderId = prompt("Enter the ID of the folder to delete:");
+              if (folderId) deleteFolder(Number(folderId));
             }}
           >
             Delete Folder
@@ -60,7 +169,7 @@ const Mailbox = ({ emails, onDelete, onFolderChange }) => {
         </div>
       </div>
 
-      {/* Dropdown to select sorting method */}
+      {/* Sorting dropdown */}
       <div className="sort-dropdown">
         <label htmlFor="sort">Sort By: </label>
         <select id="sort" value={sortOrder} onChange={handleSortChange}>
@@ -69,30 +178,24 @@ const Mailbox = ({ emails, onDelete, onFolderChange }) => {
         </select>
       </div>
 
+      {/* Email list */}
       <ul id="emails-list">
         {emails.map((email) => (
-          <EmailItem key={email.id} email={email} onDelete={onDelete} />
+          <EmailItem
+            key={email.id}
+            email={email}
+            onDelete={(emailId) => {
+              setEmails(emails.filter((email) => email.id !== emailId));
+            }}
+          />
         ))}
       </ul>
     </div>
   );
 };
 
-// Prop validation
 Mailbox.propTypes = {
-  emails: PropTypes.arrayOf(
-    PropTypes.shape({
-      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-      subject: PropTypes.string.isRequired,
-      to: PropTypes.string.isRequired,
-      senderEmail: PropTypes.string.isRequired,
-      body: PropTypes.string.isRequired,
-      priority: PropTypes.number.isRequired,
-    })
-  ).isRequired,
   user: PropTypes.object.isRequired,
-  onDelete: PropTypes.func.isRequired,
-  onFolderChange: PropTypes.func.isRequired,
 };
 
 export default Mailbox;

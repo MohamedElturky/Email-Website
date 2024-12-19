@@ -7,7 +7,6 @@ import "./styles.css";
 
 const App = () => {
   const [theme, setTheme] = useState("light");
-  const [currentFolder, setCurrentFolder] = useState(null);
   const [emails, setEmails] = useState([]);
   const [currentPage, setCurrentPage] = useState("login");
   const [user, setUser] = useState(null);
@@ -178,69 +177,7 @@ const App = () => {
             <h2>Your Mailbox</h2>
           </header>
           <button onClick={() => setCurrentPage("home")}>Back to Home</button>
-          <Mailbox
-            emails={emails}
-            user={user}
-            onDelete={(emailId) => {
-              setEmails((prevEmails) =>
-                prevEmails.filter((email) => email.id !== emailId)
-              );
-            }}
-            onFolderChange={async (folderName, sortOrder) => {
-              // Avoid fetching emails if the selected folder is already loaded
-              if (folderName === currentFolder) return;
-
-              try {
-                // Fetch all folders for the user
-                const folderResponse = await axios.get(
-                  "http://localhost:8081/api/folder/all",
-                  {
-                    params: { userId: user.id },
-                  }
-                );
-                const folders = folderResponse.data;
-
-                // Find the folder matching the clicked button
-                const selectedFolder = folders.find(
-                  (folder) =>
-                    folder.label.toLowerCase() === folderName.toLowerCase()
-                );
-
-                if (!selectedFolder) {
-                  throw new Error(`Folder '${folderName}' not found.`);
-                }
-
-                // Fetch emails for the selected folder (either by default or priority)
-                let emailResponse;
-                if (sortOrder === "priority") {
-                  emailResponse = await axios.get(
-                    `http://localhost:8081/api/email/folder/priority`,
-                    {
-                      params: { folderId: selectedFolder.id },
-                    }
-                  );
-                } else {
-                  emailResponse = await axios.get(
-                    `http://localhost:8081/api/email/folder/default`,
-                    {
-                      params: { folderId: selectedFolder.id },
-                    }
-                  );
-                }
-
-                setEmails(emailResponse.data); // Update emails state with fetched data
-                setCurrentFolder(folderName); // Set the current folder to prevent repeated requests
-              } catch (error) {
-                console.error(
-                  `Error loading emails for folder '${folderName}':`,
-                  error.message
-                );
-                alert(
-                  `Failed to load emails for '${folderName}'. Please try again.`
-                );
-              }
-            }}
-          />
+          <Mailbox user={user} />
         </div>
       )}
     </div>
