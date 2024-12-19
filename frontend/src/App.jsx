@@ -87,7 +87,7 @@ const App = () => {
     try {
       if (user) {
         const response = await axios.get(
-          "http://localhost:8081/api/email/all",
+          "http://localhost:8081/api/email/inbox/default",
           {
             params: { userId: user.id },
           }

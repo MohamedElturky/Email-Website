@@ -73,21 +73,10 @@ public class ContactService {
         }
     }
 
-    public Contact addEmailAddressToContact(int id, String emailAddress) {
+    public Contact updateEmailAddresses(int id, List<String> emailAddresses) {
         Contact contact = contactRepository.findById(id).orElse(null);
         if (contact != null) {
-            contact.getEmailAddresses().add(emailAddress);
-            return contactRepository.save(contact);
-        }
-        else {
-            throw new RuntimeException("Contact not found");
-        }
-    }
-
-    public Contact deleteEmailAddressFromContact(int id, String emailAddress) {
-        Contact contact = contactRepository.findById(id).orElse(null);
-        if (contact != null) {
-            contact.getEmailAddresses().remove(emailAddress);
+            contact.setEmailAddresses(emailAddresses);
             return contactRepository.save(contact);
         }
         else {

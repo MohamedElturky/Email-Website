@@ -36,16 +36,19 @@ const ContactManager = ({ userId }) => {
 
     try {
       if (editContactId) {
-        // Update contact
-        await axios.put(`${API_BASE_URL}/rename`, null, {
-          params: { id: editContactId, name: newContact.name },
-        });
 
-        for (const email of newContact.emailAddresses) {
-          await axios.put(`${API_BASE_URL}/add-email-address`, null, {
-            params: { id: editContactId, emailAddress: email },
-          });
-        }
+        await axios.put(`${API_BASE_URL}/rename`,
+            null,
+            {
+              params: { id: editContactId, name: newContact.name}
+            });
+
+        await axios.put(`${API_BASE_URL}/update-email-addresses`,
+            newContact.emailAddresses,
+            {
+              params: { id: editContactId }
+            });
+
       } else {
         // Add new contact with userId included
         const payload = {
@@ -59,7 +62,7 @@ const ContactManager = ({ userId }) => {
 
       setNewContact({ name: "", emailAddresses: [""] });
       setEditContactId(null);
-      fetchContacts();
+      await fetchContacts();
     } catch (error) {
       console.error("Error saving contact:", error);
     }

@@ -18,12 +18,12 @@ public class ContactController {
     }
 
     @GetMapping("/all")
-    public List<Contact> getAllContacts(int userId) {
+    public List<Contact> getAllContacts(@RequestParam int userId) {
         return contactService.getAllContacts(userId);
     }
 
     @GetMapping("/all/sorted")
-    public List<Contact> getAllContactsSortedLexicographicallyByName(int userId) {
+    public List<Contact> getAllContactsSortedLexicographicallyByName(@RequestParam int userId) {
         return contactService.getContactsSortedLexicographicallyByName(userId);
     }
 
@@ -40,7 +40,7 @@ public class ContactController {
     }
 
     @GetMapping
-    public Contact getContact(int id) {
+    public Contact getContact(@RequestParam int id) {
         return contactService.getContactById(id);
     }
 
@@ -54,18 +54,14 @@ public class ContactController {
         return contactService.renameContact(id, name);
     }
 
-    @PutMapping("/add-email-address")
-    public Contact addEmailAddressToContact(int id, String emailAddress) {
-        return contactService.addEmailAddressToContact(id, emailAddress);
-    }
-
-    @PutMapping("/delete-email-address")
-    public Contact deleteEmailAddressFromContact(int id, String emailAddress) {
-        return contactService.deleteEmailAddressFromContact(id, emailAddress);
+    @PutMapping("/update-email-addresses")
+    public Contact updateEmailAddresses(@RequestParam int id,
+                                        @RequestBody List<String> emailAddresses) {
+        return contactService.updateEmailAddresses(id, emailAddresses);
     }
 
     @DeleteMapping
-    public void deleteContact(int id) {
+    public void deleteContact(@RequestParam int id) {
         contactService.deleteContact(id);
     }
 }
