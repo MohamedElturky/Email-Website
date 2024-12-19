@@ -1,72 +1,50 @@
-package edu.alexu.mail.model;
+package edu.alexu.mail.controller;
 
-import jakarta.persistence.*;
+import edu.alexu.mail.model.Folder;
+import edu.alexu.mail.service.FolderService;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-@Entity
-@Table(name = "folders")
-public class Folder {
+@CrossOrigin
+@RestController
+@RequestMapping("/api/folder")
+public class FolderController {
 
-    public static final List<String> defaultFolders = Arrays.asList("Inbox", "Trash", "Draft", "Sent");
+    private final FolderService folderService;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
-
-    private int userId;
-
-    private String label;
-
-    @Column(columnDefinition = "BLOB")
-    private List<Integer> emailsIds;
-
-    public Folder() {
-        this.emailsIds = new ArrayList<>();
+    public FolderController(FolderService folderService) {
+        this.folderService = folderService;
     }
 
-    public Folder(String label, int userId) {
-        this();
-        this.label = label;
-        this.userId = userId;
+    @PostMapping
+    public Folder addFolder(@RequestBody Folder folder) {
+        return folderService.addFolder(folder);
     }
 
-    public int getId() {
-        return id;
+    @DeleteMapping
+    public void removeFolder(@RequestParam int id) {
+        folderService.deleteFolder(id);
     }
 
-    public int getUserId() {
-        return userId;
+    @PutMapping
+    public Folder renameFolder(@RequestParam int id, @RequestParam String label) {
+        return folderService.renameFolder(id, label);
     }
 
-    public String getLabel() {
-        return label;
+    @GetMapping
+    public Folder getFolderById(@RequestParam int id) {
+        return folderService.getFolder(id);
     }
 
-    public List<Integer> getEmailsIds() {
-        return emailsIds;
+    @GetMapping("/all")
+    public List<Folder> getAllFoldersByUserId(@RequestParam int userId) {
+        return folderService.getAllFolders(userId);
     }
 
-
-    public void setId(int id) {
-        this.id = id;
+    @PutMapping("/move")
+    public void moveEmails(List<Integer> emailIds, int fromId, int toId) {
+        folderService.moveEmails(emailIds, fromId, toId);
     }
 
-    public void setLabel(String label) {
-        this.label = label;
-    }
-
-    public void setUserId(int userId) {
-        this.userId = userId;
-    }
-
-    public void setEmailsIds(List<Integer> emailsIds) {
-        this.emailsIds = emailsIds;
-    }
-
-    public void empty() {
-        emailsIds.clear();
-    }
 }
