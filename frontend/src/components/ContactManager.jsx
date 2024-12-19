@@ -53,7 +53,7 @@ const ContactManager = ({ userId }) => {
           name: newContact.name,
           emailAddresses: newContact.emailAddresses,
         };
-        console.log("Payload being sent:", payload); // Debug log
+        console.log("Payload being sent:", payload);
         await axios.post(API_BASE_URL, payload);
       }
 
