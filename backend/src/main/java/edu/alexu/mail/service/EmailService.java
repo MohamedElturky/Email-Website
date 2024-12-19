@@ -53,16 +53,30 @@ public class EmailService {
         }
     }
 
-    public List<Email> getAllEmailsSortedByDate(int userId) {
-        List<Email> emails = new ArrayList<>(getAllEmailsByUserId(userId));
-        emails.sort(Comparator.comparing(Email::getCreationDateTime));
-        return emails;
+    public List<Email> getFolderEmailsSortedByDate(int folderId) {
+        Folder folder = folderRepository.findById(folderId).orElse(null);
+        if (folder != null) {
+            return folder
+                    .getEmailsIds()
+                    .stream()
+                    .map(emailId -> emailRepository.findById(emailId).orElse(null))
+                    .sorted(Comparator.comparing(Email::getCreationDateTime).reversed())
+                    .toList();
+        }
+        else throw new RuntimeException("Folder not found");
     }
 
-    public List<Email> getAllEmailsSortedByPriority(int userId) {
-        List<Email> emails = new ArrayList<>(getAllEmailsByUserId(userId));
-        emails.sort(Comparator.comparingInt(Email::getPriority));
-        return emails;
+    public List<Email> getFolderEmailsSortedByPriority(int folderId) {
+        Folder folder = folderRepository.findById(folderId).orElse(null);
+        if (folder != null) {
+            return folder
+                    .getEmailsIds()
+                    .stream()
+                    .map(emailId -> emailRepository.findById(emailId).orElse(null))
+                    .sorted(Comparator.comparing(Email::getPriority))
+                    .toList();
+        }
+        else throw new RuntimeException("Folder not found");
     }
 
     public List<Email> getAllEmailsOnAndAfter(int userId, LocalDateTime dateTime) {
@@ -223,4 +237,5 @@ public class EmailService {
                 .map(path -> path.getFileName().toString())
                 .toList();
     }
+
 }

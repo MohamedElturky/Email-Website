@@ -20,9 +20,14 @@ public class EmailController {
         this.emailService = emailService;
     }
 
-    @GetMapping("/all")
-    public List<Email> getAllEmailsSortedByDate(@RequestParam int userId) {
-        return emailService.getAllEmailsSortedByDate(userId);
+    @GetMapping("/folder/default")
+    public List<Email> getFolderEmailsSortedByDate(@RequestParam int folderId) {
+        return emailService.getFolderEmailsSortedByDate(folderId);
+    }
+
+    @GetMapping("/folder/priority")
+    public List<Email> getFolderEmailsSortedByPriority(@RequestParam int folderId) {
+        return emailService.getFolderEmailsSortedByPriority(folderId);
     }
 
     @GetMapping("/all/on-and-after")
@@ -44,10 +49,6 @@ public class EmailController {
         return emailService.getAllEmailsOnAndBetween(userId, startDateTime, endDateTime);
     }
 
-    @GetMapping("/all/sorted/priority")
-    public List<Email> getAllEmailsSortedByPriority(@RequestParam int userId) {
-        return emailService.getAllEmailsSortedByPriority(userId);
-    }
 
     @GetMapping("/all/receivers")
     public List<Email> getAllEmailsByReceivers(@RequestParam int userId,
