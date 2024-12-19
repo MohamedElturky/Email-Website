@@ -233,7 +233,6 @@ const App = () => {
         <>
           <header>
             <h1>Email Application</h1>
-            {user && <p>Welcome, {user.username}!</p>}
             <button
               onClick={() => toggleTheme("light")}
               disabled={theme === "light"}
@@ -263,7 +262,9 @@ const App = () => {
           <button onClick={() => setCurrentPage("mailbox")}>
             Open Mailbox
           </button>
-          <ContactManager />
+          {currentPage === "home" && user && (
+            <ContactManager userId={user.id} />
+          )}
         </>
       )}
       {currentPage === "mailbox" && (
