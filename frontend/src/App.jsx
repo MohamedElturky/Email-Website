@@ -1,14 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import axios from "axios";
 import ComposeEmail from "./components/ComposeEmail";
 import ContactManager from "./components/ContactManager";
+import Mailbox from "./components/Mailbox";
 import "./styles.css";
 
 const App = () => {
   const [theme, setTheme] = useState("light");
+  const [currentFolder, setCurrentFolder] = useState(null);
   const [emails, setEmails] = useState([]);
   const [currentPage, setCurrentPage] = useState("login");
-  const [draggedEmail, setDraggedEmail] = useState(null);
   const [user, setUser] = useState(null);
   const [form, setForm] = useState({ username: "", password: "" });
 
@@ -82,102 +83,6 @@ const App = () => {
       alert("Registration failed. Please try again.");
     }
   };
-
-  const loadEmails = useCallback(async () => {
-    try {
-      if (user) {
-        const response = await axios.get(
-          "http://localhost:8081/api/email/inbox/default",
-          {
-            params: { userId: user.id },
-          }
-        );
-        console.log("Email response:", response.data);
-
-        // Assume `senderId` can be mapped to an actual sender's email, you can add that here
-        const updatedEmails = response.data
-          .map((email) => ({
-            ...email,
-            to: email.receiversEmailAddresses.join(", "), // Combine receivers if there are multiple
-            subject: email.topic, // Map 'topic' to 'subject'
-            body: email.body,
-          }))
-          .sort((a, b) => {
-            // Ensure priority is treated as a number for proper sorting
-            const priorityA = Number(a.priority) || 0;
-            const priorityB = Number(b.priority) || 0;
-            return priorityA - priorityB; // Sort in ascending order (low priority first)
-          });
-        setEmails(updatedEmails);
-      }
-    } catch (error) {
-      console.error("Error loading emails:", error.message);
-    }
-  }, [user]);
-
-  const handleDragStart = (event, emailId) => {
-    setDraggedEmail(emailId);
-    event.target.style.opacity = "0.5";
-  };
-
-  const handleDragEnd = (event) => {
-    setDraggedEmail(null);
-    event.target.style.opacity = "1";
-  };
-
-  const handleDragOver = (event) => {
-    event.preventDefault();
-  };
-
-  const handleDrop = (event, targetEmailId) => {
-    event.preventDefault();
-    if (draggedEmail !== targetEmailId) {
-      const reorderedEmails = [...emails];
-      const draggedIndex = reorderedEmails.findIndex(
-        (email) => email.id === draggedEmail
-      );
-      const targetIndex = reorderedEmails.findIndex(
-        (email) => email.id === targetEmailId
-      );
-      const [draggedEmailObj] = reorderedEmails.splice(draggedIndex, 1);
-      reorderedEmails.splice(targetIndex, 0, draggedEmailObj);
-      setEmails(reorderedEmails);
-    }
-  };
-
-  const deleteSelectedEmails = async () => {
-    // Get all the selected checkboxes
-    const selectedEmails = document.querySelectorAll(".email-checkbox:checked");
-
-    // Get the IDs of selected emails
-    const selectedIds = Array.from(selectedEmails).map((checkbox) =>
-      parseInt(checkbox.dataset.id)
-    );
-
-    try {
-      // Send DELETE requests to the backend for each selected email
-      for (const id of selectedIds) {
-        await axios.delete("http://localhost:8081/api/email", {
-          params: { id },
-        });
-      }
-
-      // Filter out the deleted emails from the state
-      const filteredEmails = emails.filter(
-        (email) => !selectedIds.includes(email.id)
-      );
-      setEmails(filteredEmails); // Update the state to reflect deleted emails
-    } catch (error) {
-      console.error("Error deleting emails:", error);
-      alert("Failed to delete some emails. Please try again.");
-    }
-  };
-
-  useEffect(() => {
-    if (currentPage === "mailbox") {
-      loadEmails();
-    }
-  }, [currentPage, loadEmails]);
 
   return (
     <div>
@@ -273,29 +178,69 @@ const App = () => {
             <h2>Your Mailbox</h2>
           </header>
           <button onClick={() => setCurrentPage("home")}>Back to Home</button>
-          <button onClick={loadEmails}>Refresh</button>
-          <button onClick={deleteSelectedEmails}>Delete Selected</button>
-          <ul id="emails-list">
-            {emails.map((email) => (
-              <li
-                key={email.id}
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, email.id)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, email.id)}
-                onDragEnd={handleDragEnd}
-              >
-                <input
-                  type="checkbox"
-                  className="email-checkbox"
-                  data-id={email.id}
-                />
-                <strong>Subject:</strong> {email.subject} <br />
-                <strong>To:</strong> {email.to} <br />
-                <strong>Body:</strong> {email.body} {/* Add this line */}
-              </li>
-            ))}
-          </ul>
+          <Mailbox
+            emails={emails}
+            user={user}
+            onDelete={(emailId) => {
+              setEmails((prevEmails) =>
+                prevEmails.filter((email) => email.id !== emailId)
+              );
+            }}
+            onFolderChange={async (folderName, sortOrder) => {
+              // Avoid fetching emails if the selected folder is already loaded
+              if (folderName === currentFolder) return;
+
+              try {
+                // Fetch all folders for the user
+                const folderResponse = await axios.get(
+                  "http://localhost:8081/api/folder/all",
+                  {
+                    params: { userId: user.id },
+                  }
+                );
+                const folders = folderResponse.data;
+
+                // Find the folder matching the clicked button
+                const selectedFolder = folders.find(
+                  (folder) =>
+                    folder.label.toLowerCase() === folderName.toLowerCase()
+                );
+
+                if (!selectedFolder) {
+                  throw new Error(`Folder '${folderName}' not found.`);
+                }
+
+                // Fetch emails for the selected folder (either by default or priority)
+                let emailResponse;
+                if (sortOrder === "priority") {
+                  emailResponse = await axios.get(
+                    `http://localhost:8081/api/email/folder/priority`,
+                    {
+                      params: { folderId: selectedFolder.id },
+                    }
+                  );
+                } else {
+                  emailResponse = await axios.get(
+                    `http://localhost:8081/api/email/folder/default`,
+                    {
+                      params: { folderId: selectedFolder.id },
+                    }
+                  );
+                }
+
+                setEmails(emailResponse.data); // Update emails state with fetched data
+                setCurrentFolder(folderName); // Set the current folder to prevent repeated requests
+              } catch (error) {
+                console.error(
+                  `Error loading emails for folder '${folderName}':`,
+                  error.message
+                );
+                alert(
+                  `Failed to load emails for '${folderName}'. Please try again.`
+                );
+              }
+            }}
+          />
         </div>
       )}
     </div>
