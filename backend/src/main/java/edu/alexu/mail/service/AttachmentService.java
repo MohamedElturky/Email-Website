@@ -17,7 +17,7 @@ import java.util.List;
 @Service
 public class AttachmentService {
 
-    private static final String FTP_SERVER = "192.168.1.4";
+    private static final String FTP_SERVER = "156.194.233.110";
     private static final int FTP_PORT = 21;
     private static final String FTP_USER = "ftp-root";
     private static final  String FTP_PASS = "root";
