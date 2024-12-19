@@ -71,4 +71,12 @@ public class UserService {
     public void deleteUser(int id) {
         userRepository.deleteById(id);
     }
+
+    public String getEmailAddress(int userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            return user.getEmailAddress();
+        }
+        else throw new RuntimeException("User not found.");
+    }
 }

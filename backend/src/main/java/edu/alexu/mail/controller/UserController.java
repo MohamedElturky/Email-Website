@@ -30,6 +30,11 @@ public class UserController {
         return authenticationService.authenticateUser(emailAddress, password);
     }
 
+    @GetMapping("/email-address")
+    public String getEmailAddress(@RequestParam int userId) {
+        return userService.getEmailAddress(userId);
+    }
+
     @DeleteMapping
     public void deleteUser(@RequestParam int id) {
         userService.deleteUser(id);
