@@ -47,7 +47,7 @@ public class EmailService {
                     .toList();
         }
         else {
-            throw new RuntimeException("User not found");
+            throw new RuntimeException("User not found.");
         }
     }
 
@@ -57,11 +57,11 @@ public class EmailService {
             return folder
                     .getEmailsIds()
                     .stream()
-                    .map(emailId -> emailRepository.findById(emailId).orElse(null))
+                    .map(this::getEmail)
                     .sorted(Comparator.comparing(Email::getCreationDateTime).reversed())
                     .toList();
         }
-        else throw new RuntimeException("Folder not found");
+        else throw new RuntimeException("Folder not found.");
     }
 
     public List<Email> getFolderEmailsSortedByPriority(int folderId) {
@@ -70,11 +70,11 @@ public class EmailService {
             return folder
                     .getEmailsIds()
                     .stream()
-                    .map(emailId -> emailRepository.findById(emailId).orElse(null))
+                    .map(this::getEmail)
                     .sorted(Comparator.comparing(Email::getPriority))
                     .toList();
         }
-        else throw new RuntimeException("Folder not found");
+        else throw new RuntimeException("Folder not found.");
     }
 
     public List<Email> getAllEmailsOnAndAfter(int userId, LocalDateTime dateTime) {
@@ -96,7 +96,7 @@ public class EmailService {
     public List<Email> getAllEmailsOnAndBetween(int userId, LocalDateTime startDateTime,
                                                 LocalDateTime endDateTime) {
         if (startDateTime.isAfter(endDateTime)) {
-            throw new RuntimeException("Start date cannot be after end date");
+            throw new RuntimeException("Start date cannot be after end date.");
         }
         List<Email> emails = getAllEmailsByUserId(userId);
         return emails
@@ -135,7 +135,7 @@ public class EmailService {
                     .toList();
         }
         else if (user == null) {
-            throw new RuntimeException("User not found");
+            throw new RuntimeException("User not found.");
         }
         else {
             throw new RuntimeException("Sender not found");
@@ -216,14 +216,31 @@ public class EmailService {
     }
 
     public Email getEmail(int id) {
-        return emailRepository.findById(id).orElse(null);
+        Email email = emailRepository.findById(id).orElse(null);
+        if (email != null) {
+            return email;
+        }
+        else {
+            throw new RuntimeException("Email not found.");
+        }
     }
 
     public void deleteEmail(int userId, Integer emailId) {
         List<Folder> userFolders = new ArrayList<>(folderRepository.findAllByUserId(userId));
+        Folder trashFolder = null;
         for (Folder folder : userFolders) {
+            if (folder.getLabel().equalsIgnoreCase("Trash")) {
+                trashFolder = folder;
+            }
             folder.getEmailsIds().remove(emailId);
             folderRepository.save(folder);
+        }
+        if (trashFolder != null) {
+            trashFolder.getEmailsIds().add(emailId);
+            folderRepository.save(trashFolder);
+        }
+        else {
+            throw new RuntimeException("Trash folder not found.");
         }
 
     }

@@ -26,14 +26,14 @@ public class FolderService {
 
         if (folder != null) {
             if (Folder.defaultFolders.contains(folder.getLabel())) {
-                throw new RuntimeException("Can't delete default folder");
+                throw new RuntimeException("Can not delete default folder.");
             }
             else {
                 folderRepository.deleteById(id);
             }
         }
         else {
-            throw new RuntimeException("Folder not found");
+            throw new RuntimeException("Folder not found.");
         }
     }
 
@@ -44,7 +44,7 @@ public class FolderService {
             return folderRepository.save(folder);
         }
         else {
-            throw new RuntimeException("Folder not found");
+            throw new RuntimeException("Folder not found.");
         }
     }
 

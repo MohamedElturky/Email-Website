@@ -50,7 +50,7 @@ public class ContactService {
         if (contact != null) {
             return contact;
         }
-        else throw new RuntimeException("Contact not found");
+        else throw new RuntimeException("Contact not found.");
     }
 
     public Contact addContact(Contact contact) {
@@ -69,7 +69,7 @@ public class ContactService {
             return contactRepository.save(contact);
         }
         else {
-            throw new RuntimeException("Contact not found");
+            throw new RuntimeException("Contact not found.");
         }
     }
 
@@ -80,7 +80,7 @@ public class ContactService {
             return contactRepository.save(contact);
         }
         else {
-            throw new RuntimeException("Contact not found");
+            throw new RuntimeException("Contact not found.");
         }
     }
 }
