@@ -1,4 +1,6 @@
-package edu.alexu.mail.filter;
+package edu.alexu.mail.filter.connective;
+
+import edu.alexu.mail.filter.Filter;
 
 import java.util.List;
 

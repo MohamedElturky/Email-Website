@@ -2,6 +2,7 @@ package edu.alexu.mail.service;
 
 
 import edu.alexu.mail.filter.*;
+import edu.alexu.mail.filter.email.EmailFilterFactory;
 import edu.alexu.mail.filter.email.EmailFilterType;
 import edu.alexu.mail.model.FolderType;
 import org.springframework.stereotype.Service;

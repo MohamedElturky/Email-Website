@@ -1,4 +1,4 @@
-package edu.alexu.mail.filter.email;
+package edu.alexu.mail.filter.email.attribute;
 
 import edu.alexu.mail.filter.Filter;
 import edu.alexu.mail.model.Email;

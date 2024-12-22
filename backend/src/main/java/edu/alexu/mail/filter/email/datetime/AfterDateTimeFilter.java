@@ -1,4 +1,4 @@
-package edu.alexu.mail.filter.email;
+package edu.alexu.mail.filter.email.datetime;
 
 import edu.alexu.mail.model.Email;
 
@@ -6,9 +6,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BeforeDateTimeFilter extends DateTimeFilter {
+public class AfterDateTimeFilter extends DateTimeFilter {
 
-    public BeforeDateTimeFilter(LocalDateTime dateTime) {
+    public AfterDateTimeFilter(LocalDateTime dateTime) {
         super(dateTime);
     }
 
@@ -16,7 +16,7 @@ public class BeforeDateTimeFilter extends DateTimeFilter {
     public List<Email> apply(List<Email> emails) {
         return emails
                 .stream()
-                .filter(email -> email.getCreationDateTime().isBefore(dateTime))
+                .filter(email -> email.getCreationDateTime().isAfter(dateTime))
                 .collect(Collectors.toList());
     }
 }

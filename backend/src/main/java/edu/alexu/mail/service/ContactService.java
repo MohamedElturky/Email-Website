@@ -62,26 +62,15 @@ public class ContactService {
     }
 
     public Contact renameContact(int id, String newName) {
-        Contact contact = contactRepository.findById(id).orElse(null);
-
-        if (contact != null) {
-            contact.setName(newName);
-            return contactRepository.save(contact);
-        }
-        else {
-            throw new RuntimeException("Contact not found.");
-        }
+        Contact contact = getContactById(id);
+        contact.setName(newName);
+        return contactRepository.save(contact);
     }
 
     public Contact updateEmailAddresses(int id, List<String> emailAddresses) {
-        Contact contact = contactRepository.findById(id).orElse(null);
-        if (contact != null) {
-            contact.setEmailAddresses(emailAddresses);
-            return contactRepository.save(contact);
-        }
-        else {
-            throw new RuntimeException("Contact not found.");
-        }
+        Contact contact = getContactById(id);
+        contact.setEmailAddresses(emailAddresses);
+        return contactRepository.save(contact);
     }
 
     public void deleteAllContactsByUserId(int userId) {
