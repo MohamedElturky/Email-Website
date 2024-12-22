@@ -239,6 +239,38 @@ public class EmailService {
         folderService.addEmailToFolder(emailId, trashFolder.getId());
     }
 
+    public Email createDraft(Email email) {
+
+        Email draft = emailRepository.save(email);
+
+        int draftId = draft.getId();
+        int senderId = draft.getSenderId();
+
+        int draftFolderId = folderService.getFolder(senderId, Folders.DRAFT).getId();
+
+        folderService.moveEmail(draftId, draftFolderId);
+
+        return draft;
+    }
+
+    public Email editDraft(Email draft) {
+        return emailRepository.save(draft);
+    }
+
+    public Email sendDraft(int draftId) {
+        Email draft = emailRepository.findById(draftId).orElse(null);
+
+        if (draft != null) {
+            int userId = draft.getSenderId();
+            int draftFolderId = folderService.getFolder(userId, Folders.DRAFT).getId();
+            folderService.deleteEmailFromFolder(draftId, draftFolderId);
+            return createEmail(draft);
+        }
+        else {
+            throw new RuntimeException("Draft not found.");
+        }
+    }
+
     public void populateInbox(int userId) {
         int sentFolderId = folderService.getFolder(userId, Folders.SENT).getId();
         getAllEmailsSent(userId)

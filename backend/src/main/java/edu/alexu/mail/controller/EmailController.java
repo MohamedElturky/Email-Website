@@ -84,6 +84,21 @@ public class EmailController {
         return emailService.createEmail(email);
     }
 
+    @PostMapping("/draft")
+    public Email createDraft(@RequestBody Email email) {
+        return emailService.createDraft(email);
+    }
+
+    @PutMapping("/draft")
+    public Email editDraft(@RequestBody Email email) {
+        return emailService.editDraft(email);
+    }
+
+    @PostMapping("/draft/send")
+    public Email sendDraft(@RequestParam int draftId) {
+        return emailService.sendDraft(draftId);
+    }
+
     @GetMapping
     public Email getEmail(@RequestParam int id) {
         return emailService.getEmail(id);
