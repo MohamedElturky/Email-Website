@@ -1,4 +1,4 @@
-package edu.alexu.mail.facade;
+package edu.alexu.mail.server;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;

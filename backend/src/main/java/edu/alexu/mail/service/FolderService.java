@@ -1,7 +1,7 @@
 package edu.alexu.mail.service;
 
 import edu.alexu.mail.model.Folder;
-import edu.alexu.mail.model.Folders;
+import edu.alexu.mail.model.FolderType;
 import edu.alexu.mail.repository.FolderRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,38 +24,28 @@ public class FolderService {
     }
 
     public void deleteFolder(int id) {
-        Folder folder = folderRepository.findById(id).orElse(null);
-        List<String> defaultFolders = Arrays.stream(Folders
-                .values())
-                .map(Folders::getStringRepresentation)
-                .toList();
-
-        if (folder != null) {
-            if (defaultFolders.contains(folder.getLabel())) {
-                throw new RuntimeException("Can not delete default folder.");
-            }
-            else {
-                folderRepository.deleteById(id);
-            }
+        Folder folder = getFolder(id);
+        if (isDefaultFolder(folder)) {
+            throw new RuntimeException("Can not delete default folder.");
         }
-        else {
-            throw new RuntimeException("Folder not found.");
-        }
+        folderRepository.deleteById(id);
     }
 
     public Folder renameFolder(int id, String newLabel) {
-        Folder folder = folderRepository.findById(id).orElse(null);
-        if (folder != null) {
-            folder.setLabel(newLabel);
-            return folderRepository.save(folder);
+        Folder folder = getFolder(id);
+        if (isDefaultFolder(folder)) {
+            throw new RuntimeException("Can not rename default folder.");
         }
-        else {
-            throw new RuntimeException("Folder not found.");
-        }
+        folder.setLabel(newLabel);
+        return folderRepository.save(folder);
     }
 
     public Folder getFolder(int id) {
-        return folderRepository.findById(id).orElse(null);
+        Folder folder = folderRepository.findById(id).orElse(null);
+        if (folder != null) {
+            return folder;
+        }
+        else throw new RuntimeException("Folder not found.");
     }
 
     public List<Folder> getAllFolders(int userId) {
@@ -78,16 +68,16 @@ public class FolderService {
     }
 
     public void createDefaultUserFolders(int userId) {
-        for (Folders defaultFolder : Folders.values()) {
-            Folder folder = new Folder(defaultFolder.getStringRepresentation(),
+        for (FolderType defaultFolder : FolderType.values()) {
+            Folder folder = new Folder(defaultFolder.toString(),
                                         userId);
             folderRepository.save(folder);
         }
     }
 
-    public Folder getFolder(int userId, Folders folderEnum) {
+    public Folder getFolder(int userId, FolderType folderType) {
         Folder folder = folderRepository.findByUserIdAndLabel(userId,
-                folderEnum.getStringRepresentation()).orElse(null);
+                folderType.toString()).orElse(null);
         if (folder != null) {
             return folder;
         }
@@ -122,10 +112,18 @@ public class FolderService {
     @Scheduled(cron = "@midnight")
     private void clearTrashFolder() {
         folderRepository
-                .findAllByLabel(Folders.TRASH.getStringRepresentation())
+                .findAllByLabel(FolderType.TRASH.toString())
                 .forEach(folder -> {
                     emptyFolder(folder.getId());
                     folderRepository.save(folder);
                 });
+    }
+
+    private boolean isDefaultFolder(Folder folder) {
+        List<String> defaultFolders = Arrays.stream(FolderType
+                        .values())
+                .map(FolderType::toString)
+                .toList();
+        return defaultFolders.contains(folder.getLabel());
     }
 }

@@ -1,7 +1,7 @@
 package edu.alexu.mail.service;
 
-import edu.alexu.mail.facade.AttachmentServer;
-import edu.alexu.mail.facade.proxy.AttachmentServerProxy;
+import edu.alexu.mail.server.AttachmentServer;
+import edu.alexu.mail.proxy.AttachmentServerProxy;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;

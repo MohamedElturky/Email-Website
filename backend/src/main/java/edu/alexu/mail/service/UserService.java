@@ -1,7 +1,7 @@
 package edu.alexu.mail.service;
 
 import edu.alexu.mail.model.Email;
-import edu.alexu.mail.model.Folders;
+import edu.alexu.mail.model.FolderType;
 import edu.alexu.mail.repository.EmailRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -50,8 +50,8 @@ public class UserService {
 
 
 
-        int sentFolderId = folderService.getFolder(registeredUserId, Folders.SENT).getId();
-        int inboxFolderId = folderService.getFolder(registeredUserId, Folders.INBOX).getId();
+        int sentFolderId = folderService.getFolder(registeredUserId, FolderType.SENT).getId();
+        int inboxFolderId = folderService.getFolder(registeredUserId, FolderType.INBOX).getId();
 
         List<Email> sentEmails = emailRepository.findAllBySenderId(registeredUserId);
         List<Email> receivedEmails = emailRepository.findAllByReceiverEmailAddress(registeredUserEmailAddress);

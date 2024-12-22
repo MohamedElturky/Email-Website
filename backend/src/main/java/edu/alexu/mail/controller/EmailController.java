@@ -1,5 +1,6 @@
 package edu.alexu.mail.controller;
 
+import edu.alexu.mail.filter.email.EmailFilterType;
 import org.springframework.web.bind.annotation.*;
 
 import edu.alexu.mail.model.Email;
@@ -29,23 +30,28 @@ public class EmailController {
         return emailService.getFolderEmailsSortedByPriority(folderId);
     }
 
-    @GetMapping("/all/on-and-after")
-    public List<Email> getAllEmailsOnAndAfter(@RequestParam int userId,
-                                              @RequestParam LocalDateTime dateTime) {
-        return emailService.getAllEmailsOnAndAfter(userId, dateTime);
+    @PutMapping("/all/filter")
+    public List<Email> getFilterEmails(@RequestBody List<Email> emails, @RequestParam EmailFilterType filterType, @RequestParam Object... args) {
+        return emailService.filterBy(emails, filterType, args);
     }
 
-    @GetMapping("/all/on-and-before")
-    public List<Email> getAllEmailsOnAndBefore(@RequestParam int userId,
+    @GetMapping("/all/on-or-after")
+    public List<Email> getAllEmailsOnOrAfter(@RequestParam int userId,
+                                             @RequestParam LocalDateTime dateTime) {
+        return emailService.getAllEmailsOnOrAfter(userId, dateTime);
+    }
+
+    @GetMapping("/all/on-or-before")
+    public List<Email> getAllEmailsOnOrBefore(@RequestParam int userId,
                                                @RequestParam LocalDateTime dateTime) {
-        return emailService.getAllEmailsOnAndBefore(userId, dateTime);
+        return emailService.getAllEmailsOnOrBefore(userId, dateTime);
     }
 
-    @GetMapping("/all/on-and-between")
-    public List<Email> getAllEmailsOnAndBetween(@RequestParam int userId,
+    @GetMapping("/all/on-or-between")
+    public List<Email> getAllEmailsOnOrBetween(@RequestParam int userId,
                                                 @RequestParam LocalDateTime startDateTime,
                                                 @RequestParam LocalDateTime endDateTime) {
-        return emailService.getAllEmailsOnAndBetween(userId, startDateTime, endDateTime);
+        return emailService.getAllEmailsOnOrBetween(userId, startDateTime, endDateTime);
     }
 
 
@@ -76,7 +82,7 @@ public class EmailController {
     @GetMapping("/all/attachments")
     public List<Email> getAllEmailsByAttachments(@RequestParam int userId,
                                                  @RequestParam List<String> attachments) {
-        return emailService.getAllEmailsByAttachments(userId, attachments);
+        return emailService.getAllEmailsByAttachmentsFileNames(userId, attachments);
     }
 
     @PostMapping

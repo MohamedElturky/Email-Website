@@ -1,35 +1,35 @@
 package edu.alexu.mail.service;
 
 
-import edu.alexu.mail.model.Folders;
+import edu.alexu.mail.filter.*;
+import edu.alexu.mail.filter.email.EmailFilterType;
+import edu.alexu.mail.model.FolderType;
 import org.springframework.stereotype.Service;
 
 import edu.alexu.mail.model.Email;
 import edu.alexu.mail.model.Folder;
 import edu.alexu.mail.repository.EmailRepository;
 
-
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
-
-import org.apache.commons.lang3.StringUtils;
 
 @Service
 public class EmailService {
 
     private final EmailRepository emailRepository;
-    private final AttachmentService attachmentService;
     private final FolderService folderService;
     private final UserService userService;
 
+    private final EmailFilterFactory emailFilterFactory;
+
     public EmailService(EmailRepository emailRepository,
-                        AttachmentService attachmentService,
-                        FolderService folderService, UserService userService) {
+                        FolderService folderService,
+                        UserService userService,
+                        EmailFilterFactory emailFilterFactory) {
         this.emailRepository = emailRepository;
-        this.attachmentService = attachmentService;
         this.folderService = folderService;
         this.userService = userService;
+        this.emailFilterFactory = emailFilterFactory;
     }
 
     public List<Email> getAllEmailsByUserId(int userId) {
@@ -49,112 +49,62 @@ public class EmailService {
 
     public List<Email> getFolderEmailsSortedByDate(int folderId) {
         Folder folder = folderService.getFolder(folderId);
-        if (folder != null) {
-            return folder
-                    .getEmailsIds()
-                    .stream()
-                    .map(this::getEmail)
-                    .sorted(Comparator.comparing(Email::getCreationDateTime).reversed())
-                    .toList();
-        }
-        else throw new RuntimeException("Folder not found.");
+        return folder
+                .getEmailsIds()
+                .stream()
+                .map(this::getEmail)
+                .sorted(Comparator.comparing(Email::getCreationDateTime).reversed())
+                .toList();
     }
 
     public List<Email> getFolderEmailsSortedByPriority(int folderId) {
         Folder folder = folderService.getFolder(folderId);
-        if (folder != null) {
-            return folder
-                    .getEmailsIds()
-                    .stream()
-                    .map(this::getEmail)
-                    .sorted(Comparator.comparing(Email::getPriority))
-                    .toList();
-        }
-        else throw new RuntimeException("Folder not found.");
-    }
-
-    public List<Email> getAllEmailsOnAndAfter(int userId, LocalDateTime dateTime) {
-        List<Email> emails = getAllEmailsByUserId(userId);
-        return emails
+        return folder
+                .getEmailsIds()
                 .stream()
-                .filter(email -> !email.getCreationDateTime().isBefore(dateTime))
+                .map(this::getEmail)
+                .sorted(Comparator.comparing(Email::getPriority))
                 .toList();
     }
 
-    public List<Email> getAllEmailsOnAndBefore(int userId, LocalDateTime dateTime) {
-        List<Email> emails = getAllEmailsByUserId(userId);
-        return emails
-                .stream()
-                .filter(email -> !email.getCreationDateTime().isAfter(dateTime))
-                .toList();
+    public List<Email> filterBy(List<Email> emails, EmailFilterType filterType, Object... arg) {
+        Filter<Email> filter = emailFilterFactory.createFilter(filterType, arg);
+        return filter.apply(emails);
     }
 
-    public List<Email> getAllEmailsOnAndBetween(int userId, LocalDateTime startDateTime,
-                                                LocalDateTime endDateTime) {
-        if (startDateTime.isAfter(endDateTime)) {
-            throw new RuntimeException("Start date cannot be after end date.");
-        }
-        List<Email> emails = getAllEmailsByUserId(userId);
-        return emails
-                .stream()
-                .filter(email ->
-                        !email.getCreationDateTime().isBefore(startDateTime) &&
-                                !email.getCreationDateTime().isAfter(endDateTime))
-                .toList();
+    public List<Email> getAllEmailsOnOrAfter(int userId, LocalDateTime dateTime) {
+        return filterBy(getAllEmailsByUserId(userId), EmailFilterType.ON_OR_AFTER, dateTime);
+    }
+
+    public List<Email> getAllEmailsOnOrBefore(int userId, LocalDateTime dateTime) {
+        return filterBy(getAllEmailsByUserId(userId), EmailFilterType.ON_OR_BEFORE, dateTime);
+    }
+
+    public List<Email> getAllEmailsOnOrBetween(int userId, LocalDateTime startDateTime,
+                                               LocalDateTime endDateTime) {
+        return filterBy(getAllEmailsByUserId(userId), EmailFilterType.ON_OR_BETWEEN, startDateTime, endDateTime);
     }
 
     public List<Email> getAllEmailsByReceivers(int userId, List<String> receiversEmailAddresses) {
-        List<Email> emails = emailRepository.findAllBySenderId(userId);
-
-        return emails
-                .stream()
-                .filter(email -> !Collections.disjoint(email.getReceiversEmailAddresses(),
-                        receiversEmailAddresses))
-                .toList();
+        return filterBy(emailRepository.findAllBySenderId(userId), EmailFilterType.RECEIVERS, receiversEmailAddresses);
     }
 
     public List<Email> getAllEmailsBySender(int userId, String senderEmailAddress) {
-
-        return getAllEmailsReceived(userService.getEmailAddress(userId))
-                .stream()
-                .filter(email -> userService.getEmailAddress(email.getSenderId()).equalsIgnoreCase(senderEmailAddress))
-                .toList();
+        return filterBy(getAllEmailsReceived(userService.getEmailAddress(userId)), EmailFilterType.SENDER, senderEmailAddress);
     }
 
     public List<Email> getAllEmailsByTopic(int userId, String topic) {
-        List<Email> emails = getAllEmailsByUserId(userId);
-        return emails
-                .stream()
-                .filter(email -> email.getTopic().equalsIgnoreCase(topic))
-                .toList();
+        return filterBy(getAllEmailsByUserId(userId), EmailFilterType.TOPIC, topic);
     }
 
     public List<Email> getAllEmailsByBody(int userId, String body) {
-        List<Email> emails = getAllEmailsByUserId(userId);
-        return emails
-                .stream()
-                .filter(email -> StringUtils.containsIgnoreCase(
-                        email.getBody(), body))
-                .toList();
+        return filterBy(getAllEmailsByUserId(userId), EmailFilterType.BODY, body);
+
     }
 
-    public List<Email> getAllEmailsByAttachments(int userId, List<String> attachments) {
-        List<Email> emails = getAllEmailsByUserId(userId);
-        return emails
-                .stream()
-                .filter(email -> {
-                    try {
-                        return !Collections.disjoint(attachmentService.
-                                getAttachmentsFileNames(email.getId()), attachments);
-                    }
-                    catch (IOException e) {
-                        System.out.println(e.getMessage());
-                        return false;
-                    }
-                })
-                .toList();
+    public List<Email> getAllEmailsByAttachmentsFileNames(int userId, List<String> attachments) {
+        return filterBy(getAllEmailsByUserId(userId), EmailFilterType.ATTACHMENTS, attachments);
     }
-
 
     public Email createEmail(Email email) {
 
@@ -164,7 +114,7 @@ public class EmailService {
         int senderId = sentEmail.getSenderId();
 
         // Move sent email to sender's sent folder.
-        int senderSentFolderId = folderService.getFolder(senderId, Folders.SENT).getId();
+        int senderSentFolderId = folderService.getFolder(senderId, FolderType.SENT).getId();
         folderService.moveEmail(emailId, senderSentFolderId);
 
 
@@ -173,7 +123,7 @@ public class EmailService {
                 .stream()
                 .filter(userService::isRegisteredUser)
                 .map(userService::getUserId)
-                .map(userId -> folderService.getFolder(userId, Folders.INBOX).getId())
+                .map(userId -> folderService.getFolder(userId, FolderType.INBOX).getId())
                 .forEach(inboxFolderId -> folderService.moveEmail(emailId, inboxFolderId));
 
         return sentEmail;
@@ -191,7 +141,7 @@ public class EmailService {
 
     public void deleteEmail(int userId, Integer emailId) {
         List<Folder> userFolders = folderService.getAllFolders(userId);
-        Folder trashFolder = folderService.getFolder(userId, Folders.TRASH);
+        Folder trashFolder = folderService.getFolder(userId, FolderType.TRASH);
 
         userFolders.forEach(folder -> folderService.deleteEmailFromFolder(emailId, folder.getId()));
 
@@ -200,8 +150,8 @@ public class EmailService {
     }
 
     public Email restoreEmail(Integer emailId, int userId) {
-        int trashFolderId = folderService.getFolder(userId, Folders.TRASH).getId();
-        int inboxFolderId = folderService.getFolder(userId, Folders.INBOX).getId();
+        int trashFolderId = folderService.getFolder(userId, FolderType.TRASH).getId();
+        int inboxFolderId = folderService.getFolder(userId, FolderType.INBOX).getId();
 
         folderService.moveEmail(emailId, trashFolderId, inboxFolderId);
 
@@ -215,7 +165,7 @@ public class EmailService {
         int draftId = draft.getId();
         int senderId = draft.getSenderId();
 
-        int draftFolderId = folderService.getFolder(senderId, Folders.DRAFT).getId();
+        int draftFolderId = folderService.getFolder(senderId, FolderType.DRAFT).getId();
 
         folderService.moveEmail(draftId, draftFolderId);
 
@@ -229,7 +179,7 @@ public class EmailService {
     public Email sendDraft(int draftId) {
         Email draft = getEmail(draftId);
         int userId = draft.getSenderId();
-        int draftFolderId = folderService.getFolder(userId, Folders.DRAFT).getId();
+        int draftFolderId = folderService.getFolder(userId, FolderType.DRAFT).getId();
         folderService.deleteEmailFromFolder(draftId, draftFolderId);
         return createEmail(draft);
     }

@@ -1,6 +1,6 @@
-package edu.alexu.mail.facade.proxy;
+package edu.alexu.mail.proxy;
 
-import edu.alexu.mail.facade.AttachmentServer;
+import edu.alexu.mail.server.AttachmentServer;
 import edu.alexu.mail.facade.AttachmentServerFacade;
 import org.springframework.stereotype.Service;
 

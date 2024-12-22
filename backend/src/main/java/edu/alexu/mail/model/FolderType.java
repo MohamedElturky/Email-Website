@@ -1,6 +1,6 @@
 package edu.alexu.mail.model;
 
-public enum Folders {
+public enum FolderType {
     INBOX("Inbox"),
     SENT("Sent"),
     DRAFT("Draft"),
@@ -8,11 +8,12 @@ public enum Folders {
 
     private final String stringRepresentation;
 
-    Folders(String stringRepresentation) {
+    FolderType(String stringRepresentation) {
         this.stringRepresentation = stringRepresentation;
     }
 
-    public String getStringRepresentation() {
+    @Override
+    public String toString() {
         return this.stringRepresentation;
     }
 }
