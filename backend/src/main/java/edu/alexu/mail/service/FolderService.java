@@ -76,7 +76,7 @@ public class FolderService {
         toFolder.getEmailsIds().add(emailId);
     }
 
-    public void createUserDefaultFolders(int userId) {
+    public void createDefaultUserFolders(int userId) {
         for (Folders defaultFolder : Folders.values()) {
             Folder folder = new Folder(defaultFolder.getStringRepresentation(),
                                         userId);

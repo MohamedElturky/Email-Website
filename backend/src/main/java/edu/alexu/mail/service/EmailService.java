@@ -4,11 +4,9 @@ package edu.alexu.mail.service;
 import edu.alexu.mail.model.Folders;
 import org.springframework.stereotype.Service;
 
-import edu.alexu.mail.model.User;
 import edu.alexu.mail.model.Email;
 import edu.alexu.mail.model.Folder;
 import edu.alexu.mail.repository.EmailRepository;
-import edu.alexu.mail.repository.UserRepository;
 
 
 import java.io.IOException;
@@ -20,53 +18,33 @@ import org.apache.commons.lang3.StringUtils;
 @Service
 public class EmailService {
 
-
     private final EmailRepository emailRepository;
-    private final UserRepository userRepository;
     private final AttachmentService attachmentService;
     private final FolderService folderService;
+    private final UserService userService;
 
     public EmailService(EmailRepository emailRepository,
-                        UserRepository userRepository,
                         AttachmentService attachmentService,
-                        FolderService folderService) {
+                        FolderService folderService, UserService userService) {
         this.emailRepository = emailRepository;
-        this.userRepository = userRepository;
         this.attachmentService = attachmentService;
         this.folderService = folderService;
+        this.userService = userService;
     }
 
     public List<Email> getAllEmailsByUserId(int userId) {
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null) {
-            return emailRepository
-                    .findAll()
-                    .stream()
-                    .filter(email -> email.getSenderId() == userId
-                            || email.getReceiversEmailAddresses().contains(user.getEmailAddress()))
-                    .toList();
-        }
-        else {
-            throw new RuntimeException("User not found.");
-        }
+        String userEmailAddress = userService.getEmailAddress(userId);
+        List<Email> emails = getAllEmailsSent(userId);
+        emails.addAll(getAllEmailsReceived(userEmailAddress));
+        return emails;
     }
 
     public List<Email> getAllEmailsSent(int userId) {
-        return  getAllEmailsByUserId(userId)
-                .stream()
-                .filter(email -> email.getSenderId() == userId)
-                .toList();
+        return  emailRepository.findAllBySenderId(userId);
     }
 
-    public List<Email> getAllEmailsReceived(int userId, String userEmailAddress) {
-        return  getAllEmailsByUserId(userId)
-                .stream()
-                .filter(email -> email
-                        .getReceiversEmailAddresses()
-                        .stream()
-                        .anyMatch(userEmailAddress::equals)
-                )
-                .toList();
+    public List<Email> getAllEmailsReceived(String userEmailAddress) {
+        return emailRepository.findAllByReceiverEmailAddress(userEmailAddress.toLowerCase());
     }
 
     public List<Email> getFolderEmailsSortedByDate(int folderId) {
@@ -120,7 +98,7 @@ public class EmailService {
         return emails
                 .stream()
                 .filter(email ->
-                                !email.getCreationDateTime().isBefore(startDateTime) &&
+                        !email.getCreationDateTime().isBefore(startDateTime) &&
                                 !email.getCreationDateTime().isAfter(endDateTime))
                 .toList();
     }
@@ -135,29 +113,12 @@ public class EmailService {
                 .toList();
     }
 
-    public List<Email> getAllEmailsBySender(int userId, String sender) {
+    public List<Email> getAllEmailsBySender(int userId, String senderEmailAddress) {
 
-        User user = userRepository.findById(userId).orElse(null);
-        User sndr = userRepository.findByEmailAddress(sender).orElse(null);
-
-        if (user != null && sndr != null) {
-            List<Email> receivedEmails = emailRepository
-                    .findAll()
-                    .stream()
-                    .filter(email -> email.getReceiversEmailAddresses().contains(user.getEmailAddress()))
-                    .toList();
-
-            return receivedEmails
-                    .stream()
-                    .filter(email -> email.getSenderId() == sndr.getId())
-                    .toList();
-        }
-        else if (user == null) {
-            throw new RuntimeException("User not found.");
-        }
-        else {
-            throw new RuntimeException("Sender not found");
-        }
+        return getAllEmailsReceived(userService.getEmailAddress(userId))
+                .stream()
+                .filter(email -> userService.getEmailAddress(email.getSenderId()).equalsIgnoreCase(senderEmailAddress))
+                .toList();
     }
 
     public List<Email> getAllEmailsByTopic(int userId, String topic) {
@@ -184,7 +145,7 @@ public class EmailService {
                 .filter(email -> {
                     try {
                         return !Collections.disjoint(attachmentService.
-                                        getAttachmentsFileNames(email.getId()), attachments);
+                                getAttachmentsFileNames(email.getId()), attachments);
                     }
                     catch (IOException e) {
                         System.out.println(e.getMessage());
@@ -202,19 +163,18 @@ public class EmailService {
         int emailId = sentEmail.getId();
         int senderId = sentEmail.getSenderId();
 
-        int senderSentFolderId = folderService.getFolder(senderId, Folders.SENT).getId();
-        List<Integer> receiversInboxFolderIds = email.getReceiversEmailAddresses()
-                .stream()
-                .map(receiverEmailAddress -> userRepository.findByEmailAddress(receiverEmailAddress).orElse(null))
-                .filter(Objects::nonNull)
-                .map(user -> folderService.getFolder(user.getId(), Folders.INBOX).getId())
-                .toList();
-
         // Move sent email to sender's sent folder.
+        int senderSentFolderId = folderService.getFolder(senderId, Folders.SENT).getId();
         folderService.moveEmail(emailId, senderSentFolderId);
 
+
         // Add received email to receivers' inbox folder.
-        receiversInboxFolderIds.forEach(receiverInboxFolderId -> folderService.moveEmail(emailId, receiverInboxFolderId));
+        email.getReceiversEmailAddresses()
+                .stream()
+                .filter(userService::isRegisteredUser)
+                .map(userService::getUserId)
+                .map(userId -> folderService.getFolder(userId, Folders.INBOX).getId())
+                .forEach(inboxFolderId -> folderService.moveEmail(emailId, inboxFolderId));
 
         return sentEmail;
     }
@@ -270,17 +230,4 @@ public class EmailService {
             throw new RuntimeException("Draft not found.");
         }
     }
-
-    public void populateInbox(int userId) {
-        int sentFolderId = folderService.getFolder(userId, Folders.SENT).getId();
-        getAllEmailsSent(userId)
-                .forEach(sentEmail -> folderService.moveEmail(sentEmail.getId(), sentFolderId));
-    }
-
-    public void populateSent(int userId, String userEmailAddress) {
-        int inboxFolderId = folderService.getFolder(userId, Folders.INBOX).getId();
-        getAllEmailsReceived(userId, userEmailAddress)
-                .forEach(sentEmail -> folderService.moveEmail(sentEmail.getId(), inboxFolderId));
-    }
-
 }
