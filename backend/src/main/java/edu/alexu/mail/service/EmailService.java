@@ -150,7 +150,7 @@ public class EmailService {
         folderService.addEmailToFolder(emailId, trashFolder.getId());
     }
 
-    public Email restoreEmail(Integer emailId, int userId) {
+    public Email restoreEmail(int userId, Integer emailId) {
         int trashFolderId = folderService.getFolder(userId, FolderType.TRASH).getId();
         int inboxFolderId = folderService.getFolder(userId, FolderType.INBOX).getId();
 

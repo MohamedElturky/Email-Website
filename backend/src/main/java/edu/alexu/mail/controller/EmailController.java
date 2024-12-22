@@ -116,8 +116,8 @@ public class EmailController {
     }
 
     @PutMapping("/restore")
-    public Email restoreEmail(@RequestParam int emailId, int userId) {
-        return emailService.restoreEmail(emailId, userId);
+    public Email restoreEmail( @RequestParam int userId, @RequestParam int emailId) {
+        return emailService.restoreEmail(userId, emailId);
     }
 
 }
