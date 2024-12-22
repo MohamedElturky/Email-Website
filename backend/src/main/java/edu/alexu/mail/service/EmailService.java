@@ -199,6 +199,15 @@ public class EmailService {
         folderService.addEmailToFolder(emailId, trashFolder.getId());
     }
 
+    public Email restoreEmail(Integer emailId, int userId) {
+        int trashFolderId = folderService.getFolder(userId, Folders.TRASH).getId();
+        int inboxFolderId = folderService.getFolder(userId, Folders.INBOX).getId();
+
+        folderService.moveEmail(emailId, trashFolderId, inboxFolderId);
+
+        return getEmail(emailId);
+    }
+
     public Email createDraft(Email email) {
 
         Email draft = emailRepository.save(email);
@@ -218,16 +227,10 @@ public class EmailService {
     }
 
     public Email sendDraft(int draftId) {
-        Email draft = emailRepository.findById(draftId).orElse(null);
-
-        if (draft != null) {
-            int userId = draft.getSenderId();
-            int draftFolderId = folderService.getFolder(userId, Folders.DRAFT).getId();
-            folderService.deleteEmailFromFolder(draftId, draftFolderId);
-            return createEmail(draft);
-        }
-        else {
-            throw new RuntimeException("Draft not found.");
-        }
+        Email draft = getEmail(draftId);
+        int userId = draft.getSenderId();
+        int draftFolderId = folderService.getFolder(userId, Folders.DRAFT).getId();
+        folderService.deleteEmailFromFolder(draftId, draftFolderId);
+        return createEmail(draft);
     }
 }

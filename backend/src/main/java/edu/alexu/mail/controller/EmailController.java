@@ -109,4 +109,9 @@ public class EmailController {
         emailService.deleteEmail(userId, emailId);
     }
 
+    @PutMapping("/restore")
+    public Email restoreEmail(@RequestParam int emailId, int userId) {
+        return emailService.restoreEmail(emailId, userId);
+    }
+
 }

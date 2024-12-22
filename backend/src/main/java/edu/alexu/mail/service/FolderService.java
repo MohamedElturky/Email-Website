@@ -74,6 +74,7 @@ public class FolderService {
     public void moveEmail(int emailId, int toId) {
         Folder toFolder = getFolder(toId);
         toFolder.getEmailsIds().add(emailId);
+        folderRepository.save(toFolder);
     }
 
     public void createDefaultUserFolders(int userId) {
@@ -122,6 +123,9 @@ public class FolderService {
     private void clearTrashFolder() {
         folderRepository
                 .findAllByLabel(Folders.TRASH.getStringRepresentation())
-                .forEach(folder -> emptyFolder(folder.getId()));
+                .forEach(folder -> {
+                    emptyFolder(folder.getId());
+                    folderRepository.save(folder);
+                });
     }
 }
