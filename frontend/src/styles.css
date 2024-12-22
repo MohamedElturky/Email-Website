@@ -129,4 +129,109 @@ input[type="file"] {
   margin-right: 8px;
   vertical-align: middle;
 }
+/* General container styling */
+.email-list {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.email-list h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.email-list ul {
+  list-style: none;
+  padding: 0;
+}
+
+.email-list li {
+  background: #fff;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.email-list li:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Email details */
+.email-list li strong {
+  color: #555;
+}
+
+.email-list li br {
+  margin-bottom: 5px;
+}
+
+.email-list li .attachments {
+  margin-top: 10px;
+}
+
+.email-list li .attachments ul {
+  list-style: disc;
+  margin-left: 20px;
+}
+
+.email-list li .attachments a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.email-list li .attachments a:hover {
+  text-decoration: underline;
+}
+
+/* Folder actions and buttons */
+.folder-actions button {
+  margin-right: 10px;
+  padding: 10px 15px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+
+.folder-actions button:hover {
+  background: #0056b3;
+}
+
+/* Folder list buttons */
+.folder-list button {
+  padding: 10px 15px;
+  margin-right: 10px;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.folder-list button.active {
+  background: #007bff;
+  color: white;
+}
+
+.folder-list button:hover {
+  background: #c0c0c0;
+}
+
+/* Add folder button */
+.folder-list button:last-child {
+  background: #4caf50;
+  color: white;
+}
+
+.folder-list button:last-child:hover {
+  background: #388e3c;
+}
+
 

@@ -5,6 +5,8 @@ import ContactManager from "./components/ContactManager";
 import Mailbox from "./components/Mailbox";
 import "./styles.css";
 
+
+
 const App = () => {
   const [theme, setTheme] = useState("light");
   const [emails, setEmails] = useState([]);
@@ -20,28 +22,29 @@ const App = () => {
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
+  const validateEmails = (emails) => {
+    const emailList = emails.split(",").map((email) => email.trim());
+    const emailRegex = /^[a-zA-Z0-9]+@gmail\.com$/; // Regex for standard Gmail format
+    return emailList.every((email) => emailRegex.test(email));
+  };
+
   // Login user
   const loginUser = async () => {
     try {
-      const response = await axios.get("http://localhost:8081/api/user/auth", {
+      const response = await axios.get("http://localhost:8080/api/user/auth", {
         params: {
           emailAddress: form.email,
           password: form.password,
         },
       });
 
-      // Check if the response contains user data
       if (!response.data || !response.data.id) {
-        throw new Error("Invalid login credentials."); // Reject login if user data is missing
+        throw new Error("Invalid login credentials.");
       }
 
       console.log("Login successful:", response.data);
-
-      // Store user data locally
       const user = response.data;
       localStorage.setItem("user", JSON.stringify(user));
-
-      // Navigate to home page
       setUser(user);
       setCurrentPage("home");
     } catch (error) {
@@ -52,36 +55,33 @@ const App = () => {
 
   // Register user
   const registerUser = async () => {
+    if (!validateEmails(form.email)) {
+      alert("Please enter a valid Gmail address (e.g., user@gmail.com).");
+      return;
+    }
+
     try {
-      // Use axios to send a POST request with query parameters
       const response = await axios.post(
-        "http://localhost:8081/api/user/register",
+        "http://localhost:8080/api/user/register",
         null,
         {
           params: {
-            emailAddress: form.email, // Assuming form contains `email` and `password` fields
+            emailAddress: form.email,
             password: form.password,
           },
         }
       );
+
       console.log("Registration successful:", response.data);
-
-      // Display success message
-      alert(
-        `Registration successful for ${response.data.emailAddress}. Please log in.`
-      );
-
-      // Redirect to login page
+      alert(`Registration successful for ${response.data.emailAddress}. Please log in.`);
       setCurrentPage("login");
+      setForm({ email: "", password: "" }); // Reset form after registration
     } catch (error) {
-      // Handle errors
-      console.error(
-        "Registration failed:",
-        error.response?.data || error.message
-      );
+      console.error("Registration failed:", error.response?.data || error.message);
       alert("Registration failed. Please try again.");
     }
   };
+
 
   return (
     <div>

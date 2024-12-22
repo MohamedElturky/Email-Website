@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
-import { useEffect } from "react";
 
 const ComposeEmail = ({ onSend, defaultSender }) => {
   const [email, setEmail] = useState({
@@ -10,28 +9,64 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
     subject: "",
     body: "",
     attachments: [],
-    priority: 1, // Default priority
+    priority: 1,
   });
 
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
-    // Retrieve user data from localStorage
     const user = JSON.parse(localStorage.getItem("user"));
     const userId = user?.id || null;
 
     if (userId) {
       setEmail((prevEmail) => ({ ...prevEmail, from: userId.toString() }));
-    } else {
-      console.error("User ID not found in localStorage");
     }
   }, []);
-
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setEmail({ ...email, [name]: value });
     if (name === "to") setError("");
+  };
+
+  const handleAttachment = async (e) => {
+    const files = Array.from(e.target.files);
+    setEmail((prevEmail) => ({
+      ...prevEmail,
+      attachments: [...prevEmail.attachments, ...files],
+    }));
+
+    // Process the first file to populate subject, body, and priority
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type === "text/plain" || file.type === "application/json") {
+        const content = await file.text();
+
+        // Attempt to parse JSON or use plain text
+        try {
+          const parsedData = JSON.parse(content);
+          setEmail((prevEmail) => ({
+            ...prevEmail,
+            subject: parsedData.subject || prevEmail.subject,
+            body: parsedData.body || prevEmail.body,
+            priority: parsedData.priority || prevEmail.priority,
+          }));
+        } catch {
+          // If not JSON, treat as plain text
+          setEmail((prevEmail) => ({
+            ...prevEmail,
+            subject: prevEmail.subject || "Extracted from File",
+            body: content || prevEmail.body,
+          }));
+        }
+      }
+    }
+  };
+
+  const handleRemoveAttachment = (index) => {
+    const updatedAttachments = email.attachments.filter((_, i) => i !== index);
+    setEmail({ ...email, attachments: updatedAttachments });
   };
 
   const validateEmails = (emails) => {
@@ -40,67 +75,74 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
     return emailList.every((email) => emailRegex.test(email));
   };
 
-  const handleAttachment = (e) => {
-    const files = Array.from(e.target.files);
-    setEmail({ ...email, attachments: [...email.attachments, ...files] });
-  };
-
-  const handleRemoveAttachment = (index) => {
-    const updatedAttachments = email.attachments.filter((_, i) => i !== index);
-    setEmail({ ...email, attachments: updatedAttachments });
-  };
-
   const handleSend = async () => {
-    // Validate recipient email addresses
-    const recipientList = email.to
-      .split(",")
-      .map((recipient) => recipient.trim());
+    const recipientList = email.to.split(",").map((recipient) => recipient.trim());
     if (!validateEmails(email.to)) {
-      setError(
-        "One or more recipient emails are invalid. Please check the format."
-      );
-      return;
+        setError("One or more recipient emails are invalid. Please check the format.");
+        return;
     }
-    console.log("Sender ID (email.from):", email.from);
 
-    // Map data to backend expected format
     const emailData = {
-      senderId: parseInt(email.from, 10), // Backend expects sender ID as an integer
-      receiversEmailAddresses: recipientList, // Array of recipient emails
-      topic: email.subject, // Subject maps to topic
-      body: email.body, // Body remains the same
-      priority: parseInt(email.priority, 10), // Priority as an integer
+        senderId: parseInt(email.from, 10),
+        receiversEmailAddresses: recipientList,
+        topic: email.subject,
+        body: email.body,
+        priority: parseInt(email.priority, 10),
     };
 
     setIsLoading(true);
     try {
-      // Send the POST request to the backend
-      await axios.post("http://localhost:8081/api/email", emailData, {
-        headers: { "Content-Type": "application/json" },
-      });
+        // Send email data
+        const response = await axios.post("http://localhost:8080/api/email", emailData, {
+            headers: { "Content-Type": "application/json" },
+        });
 
-      // Success actions
-      onSend(email);
-      alert("Email sent successfully!");
-      setEmail({
-        from: JSON.parse(localStorage.getItem("user"))?.id?.toString() || "",
-        to: "",
-        subject: "",
-        body: "",
-        attachments: [], // Clear attachments
-        priority: 1, // Reset priority to default
-      });
+        const emailId = response.data.id;
+
+        // Prepare to upload attachments if present
+        if (email.attachments.length > 0) {
+            const formData = new FormData();
+            email.attachments.forEach((file) => {
+                formData.append("files", file);
+            });
+
+            // Send the attachments to the backend
+            const attachmentResponse = await axios.post(`http://localhost:8080/api/attachment`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+                params: { emailId }, // Ensure emailId is included in the request
+            });
+
+            if (attachmentResponse.status !== 200) {
+                throw new Error("Failed to upload attachments.");
+            }
+        }
+
+        onSend(email);
+        alert("Email sent successfully!");
+        setEmail({
+            from: defaultSender,
+            to: "",
+            subject: "",
+            body: "",
+            attachments: [],
+            priority: 1,
+        });
     } catch (error) {
-      console.error(
-        "Error sending email:",
-        error.response?.data || error.message
-      );
-      alert("Failed to send email. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        console.error("Error sending email:", error.message);
 
+        // Log the detailed error response if available
+        if (error.response) {
+            console.error("Error details:", error.response.data);
+            alert(`Failed to send email: ${error.response.data.message || "Unknown error"}`);
+        } else {
+            alert("Failed to send email. Please try again.");
+        }
+    } finally {
+        setIsLoading(false);
+    }
+};
   return (
     <div>
       <h2>Compose Email</h2>
@@ -132,9 +174,18 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
         <option value="4">Priority 4 (None)</option>
       </select>
 
-      {/* Attachment Input */}
       <div>
-        <input type="file" multiple onChange={handleAttachment} />
+        <label htmlFor="file-upload" style={{ cursor: "pointer" }}>
+          <i className="fas fa-upload" style={{ marginRight: "8px" }}></i>
+          Upload Attachments
+        </label>
+        <input
+          id="file-upload"
+          type="file"
+          multiple
+          onChange={handleAttachment}
+          style={{ display: "none" }}
+        />
         {email.attachments.length > 0 && (
           <ul>
             {email.attachments.map((file, index) => (

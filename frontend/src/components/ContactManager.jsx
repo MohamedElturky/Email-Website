@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useCallback } from "react";
 import axios from "axios";
 import PropTypes from "prop-types";
 
@@ -16,10 +16,10 @@ const ContactManager = ({ userId }) => {
     userId: PropTypes.number.isRequired,
   };
 
-  const API_BASE_URL = "http://localhost:8081/api/contact";
+  const API_BASE_URL = "http://localhost:8080/api/contact";
   console.log("Received userId:", userId);
   // Fetch all contacts
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/all`, {
         params: { userId },
@@ -28,7 +28,7 @@ const ContactManager = ({ userId }) => {
     } catch (error) {
       console.error("Error fetching contacts:", error);
     }
-  };
+  }, [userId]);
 
   // Add or update a contact
   const saveContact = async () => {
@@ -130,7 +130,7 @@ const ContactManager = ({ userId }) => {
 
   useEffect(() => {
     fetchContacts();
-  }, []);
+  }, [fetchContacts]);
 
   return (
     <div>
