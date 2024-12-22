@@ -1,6 +1,8 @@
 package edu.alexu.mail.controller;
 
 import edu.alexu.mail.service.AttachmentService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,8 +38,8 @@ public class AttachmentController {
     }
 
     @GetMapping("/download")
-    public String getDownloadLink(@RequestParam int emailId,
-                                  @RequestParam String attachmentFileName) {
-        return attachmentService.getDownloadLink(emailId, attachmentFileName);
+    public ResponseEntity<Resource> getDownloadLink(@RequestParam int emailId,
+                                                    @RequestParam String attachmentFileName) throws IOException {
+        return attachmentService.downloadAttachment(emailId, attachmentFileName);
     }
 }
