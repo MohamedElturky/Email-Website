@@ -83,4 +83,9 @@ public class ContactService {
             throw new RuntimeException("Contact not found.");
         }
     }
+
+    public void deleteAllContactsByUserId(int userId) {
+        getAllContacts(userId)
+                .forEach(contact -> contactRepository.deleteById(contact.getId()));
+    }
 }

@@ -1,32 +1,33 @@
 package edu.alexu.mail.service;
 
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import edu.alexu.mail.model.Email;
-import edu.alexu.mail.model.Folder;
 import edu.alexu.mail.model.User;
-
 import edu.alexu.mail.repository.UserRepository;
-import edu.alexu.mail.repository.FolderRepository;
 
 @Service
 public class UserService {
 
     private final PasswordEncoder passwordEncoder;
+    private final FolderService folderService;
+    private final ContactService contactService;
     private final EmailService emailService;
+    private final AuthenticationService authenticationService;
     private final UserRepository userRepository;
-    private final FolderRepository folderRepository;
 
     public UserService(PasswordEncoder passwordEncoder,
-                       EmailService emailService,
                        UserRepository userRepository,
-                       FolderRepository folderRepository) {
+                       FolderService folderService,
+                       ContactService contactService,
+                       AuthenticationService authenticationService,
+                       EmailService emailService) {
         this.passwordEncoder = passwordEncoder;
-        this.emailService = emailService;
         this.userRepository = userRepository;
-        this.folderRepository = folderRepository;
+        this.folderService = folderService;
+        this.contactService = contactService;
+        this.authenticationService = authenticationService;
+        this.emailService = emailService;
     }
 
     public User registerUser(String emailAddress, String password) {
@@ -37,39 +38,24 @@ public class UserService {
         user.setHashedPassword(hashedPassword);
 
         User registeredUser = userRepository.save(user);
+        int registeredUserId = registeredUser.getId();
+        String registeredUserEmailAddress = registeredUser.getEmailAddress();
 
-        Folder sentFolder = null;
-        Folder inboxFolder = null;
+        folderService.createUserDefaultFolders(registeredUserId);
 
-        for (String defaultFolder : Folder.defaultFolders) {
-            Folder folder = new Folder(defaultFolder, registeredUser.getId());
-            if (defaultFolder.equalsIgnoreCase("Sent")) sentFolder = folder;
-            else if (defaultFolder.equalsIgnoreCase("Inbox")) inboxFolder = folder;
-            folderRepository.save(folder);
-        }
-
-        for (Email email : emailService.getAllEmailsByUserId(registeredUser.getId())) {
-            if (email.getSenderId() == registeredUser.getId()) {
-                if (sentFolder != null) {
-                    sentFolder.getEmailsIds().add(email.getId());
-                    folderRepository.save(sentFolder);
-                }
-                else throw new RuntimeException("Sent folder not found.");
-            }
-            if (email.getReceiversEmailAddresses().contains(registeredUser.getEmailAddress())) {
-                if (inboxFolder != null) {
-                    inboxFolder.getEmailsIds().add(email.getId());
-                    folderRepository.save(inboxFolder);
-                }
-                else throw new RuntimeException("Inbox folder not found.");
-            }
-        }
+        emailService.populateInbox(registeredUserId);
+        emailService.populateSent(registeredUserId, registeredUserEmailAddress);
 
         return registeredUser;
     }
 
-    public void deleteUser(int id) {
-        userRepository.deleteById(id);
+    public void deleteUser(String password, int userId) {
+        User authenticateUser = authenticationService.authenticateUser(getEmailAddress(userId), password);
+        if (authenticateUser != null) {
+            userRepository.deleteById(userId);
+            folderService.deleteAllFoldersByUserId(userId);
+            contactService.deleteAllContactsByUserId(userId);
+        }
     }
 
     public String getEmailAddress(int userId) {

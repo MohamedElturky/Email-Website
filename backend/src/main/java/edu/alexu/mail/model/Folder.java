@@ -10,8 +10,6 @@ import java.util.List;
 @Table(name = "folders")
 public class Folder {
 
-    public static final List<String> defaultFolders = Arrays.asList("Inbox", "Trash", "Draft", "Sent");
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -66,7 +64,4 @@ public class Folder {
         this.emailsIds = emailsIds;
     }
 
-    public void empty() {
-        emailsIds.clear();
-    }
 }
