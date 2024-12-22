@@ -91,7 +91,7 @@ public class FolderService {
                 .forEach(folder -> folderRepository.deleteById(folder.getId()));
     }
 
-    public void deleteEmailFromFolder(int emailId, int folderId) {
+    public void deleteEmailFromFolder(Integer emailId, int folderId) {
         Folder folder = getFolder(folderId);
         folder.getEmailsIds().remove(emailId);
         folderRepository.save(folder);
