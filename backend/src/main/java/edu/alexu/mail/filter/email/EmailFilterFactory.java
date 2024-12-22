@@ -1,7 +1,6 @@
 package edu.alexu.mail.filter.email;
 
 import edu.alexu.mail.filter.*;
-import edu.alexu.mail.filter.connective.ConnectiveType;
 import edu.alexu.mail.filter.email.attribute.*;
 import edu.alexu.mail.filter.email.datetime.AfterDateTimeFilter;
 import edu.alexu.mail.filter.email.datetime.BeforeDateTimeFilter;

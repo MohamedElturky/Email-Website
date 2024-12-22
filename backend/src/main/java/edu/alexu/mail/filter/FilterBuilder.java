@@ -1,7 +1,6 @@
 package edu.alexu.mail.filter;
 
 import edu.alexu.mail.filter.connective.AndFilter;
-import edu.alexu.mail.filter.connective.ConnectiveType;
 import edu.alexu.mail.filter.connective.NotFilter;
 import edu.alexu.mail.filter.connective.OrFilter;
 import org.springframework.stereotype.Service;
