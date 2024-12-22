@@ -22,23 +22,33 @@ public class FilterBuilder <T> {
         return this;
     }
 
-    public FilterBuilder<T> addConnectiveFilter(ConnectiveType connectiveType) {
-        switch (connectiveType) {
-            case AND -> {
-                Filter<T> filter1 = buildStack.pop();
-                Filter<T> filter2 = buildStack.pop();
-                buildStack.push(new AndFilter<>(filter1, filter2));
-            }
-            case OR -> {
-                Filter<T> filter1 = buildStack.pop();
-                Filter<T> filter2 = buildStack.pop();
-                buildStack.push(new OrFilter<>(filter1, filter2));
-            }
-            case NOT -> {
-                Filter<T> filter1 = buildStack.pop();
-                buildStack.push(new NotFilter<>(filter1));
-            }
-        }
+    public FilterBuilder<T> or(Filter<T> filter) {
+        buildStack.push(new OrFilter<>(buildStack.pop(), filter));
+        return this;
+    }
+
+    public FilterBuilder<T> and(Filter<T> filter) {
+        buildStack.push(new AndFilter<>(buildStack.pop(), filter));
+        return this;
+    }
+
+    public FilterBuilder<T> not(Filter<T> filter) {
+        buildStack.push(new NotFilter<>(filter));
+        return this;
+    }
+
+    public FilterBuilder<T> or() {
+        buildStack.push(new OrFilter<>(buildStack.pop(), buildStack.pop()));
+        return this;
+    }
+
+    public FilterBuilder<T> and() {
+        buildStack.push(new AndFilter<>(buildStack.pop(), buildStack.pop()));
+        return this;
+    }
+
+    public FilterBuilder<T> not() {
+        buildStack.push(new NotFilter<>(buildStack.pop()));
         return this;
     }
 

@@ -33,15 +33,13 @@ public class EmailFilterFactory {
             case ON_OR_BEFORE -> {
                 return filterBuilder
                         .addFilter(new OnDateTimeFilter((LocalDateTime) arg[0]))
-                        .addFilter(new BeforeDateTimeFilter((LocalDateTime) arg[0]))
-                        .addConnectiveFilter(ConnectiveType.OR)
+                        .or(new BeforeDateTimeFilter((LocalDateTime) arg[0]))
                         .build();
             }
             case ON_OR_AFTER -> {
                 return filterBuilder
                         .addFilter(new OnDateTimeFilter((LocalDateTime) arg[0]))
-                        .addFilter(new AfterDateTimeFilter((LocalDateTime) arg[0]))
-                        .addConnectiveFilter(ConnectiveType.OR)
+                        .or(new AfterDateTimeFilter((LocalDateTime) arg[0]))
                         .build();
             }
             case ON_OR_BETWEEN -> {
@@ -53,11 +51,9 @@ public class EmailFilterFactory {
                 }
 
                 return filterBuilder
-                        .addFilter(new AfterDateTimeFilter(endDateTime))
-                        .addConnectiveFilter(ConnectiveType.NOT)
-                        .addFilter(new BeforeDateTimeFilter(startDateTime))
-                        .addConnectiveFilter(ConnectiveType.NOT)
-                        .addConnectiveFilter(ConnectiveType.AND)
+                        .not(new AfterDateTimeFilter(endDateTime))
+                        .not(new BeforeDateTimeFilter(startDateTime))
+                        .and()
                         .build();
             }
             case RECEIVERS -> {
