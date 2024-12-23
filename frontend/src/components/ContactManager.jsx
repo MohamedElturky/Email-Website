@@ -5,10 +5,10 @@ import PropTypes from "prop-types";
 const ContactManager = ({ userId }) => {
   const [contacts, setContacts] = useState([]);
   const [newContact, setNewContact] = useState({
-    name: "",
-    emailAddresses: [""],
+    name: '',
+    emailAddresses: '',
   });
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState({ name: '', emailAddresses: '' });
   const [editContactId, setEditContactId] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
 
@@ -32,7 +32,7 @@ const ContactManager = ({ userId }) => {
 
   // Add or update a contact
   const saveContact = async () => {
-    if (!newContact.name || !newContact.emailAddresses[0]) return;
+    if (!newContact.name || !newContact.emailAddresses) return;
 
     try {
       if (editContactId) {
@@ -43,24 +43,38 @@ const ContactManager = ({ userId }) => {
               params: { id: editContactId, name: newContact.name}
             });
 
+        const trimmedEmailAddresses = newContact.emailAddresses
+            .split(',')
+            .map(item => item.trim())
+            .filter(item => item.length > 0)
+
         await axios.put(`${API_BASE_URL}/update-email-addresses`,
-            newContact.emailAddresses,
+            trimmedEmailAddresses,
             {
               params: { id: editContactId }
             });
 
       } else {
         // Add new contact with userId included
+
+        const trimmedEmailAddresses = newContact.emailAddresses
+            .split(',')
+            .map(item => item.trim())
+            .filter(item => item.length > 0)
+
+        console.log('New contact trimmed email addresses: ', trimmedEmailAddresses)
+
         const payload = {
           userId,
           name: newContact.name,
-          emailAddresses: newContact.emailAddresses,
+          emailAddresses: trimmedEmailAddresses,
         };
+
         console.log("Payload being sent:", payload);
         await axios.post(API_BASE_URL, payload);
       }
 
-      setNewContact({ name: "", emailAddresses: [""] });
+      setNewContact({ name: '', emailAddresses: '' });
       setEditContactId(null);
       await fetchContacts();
     } catch (error) {
@@ -72,7 +86,7 @@ const ContactManager = ({ userId }) => {
   const deleteContact = async (id) => {
     try {
       await axios.delete(API_BASE_URL, { params: { id } });
-      fetchContacts();
+      await fetchContacts();
     } catch (error) {
       console.error("Error deleting contact:", error);
     }
@@ -81,13 +95,39 @@ const ContactManager = ({ userId }) => {
   // Search contacts by name or email
   const searchContacts = async () => {
     try {
-      if (searchQuery) {
-        const response = await axios.get(`${API_BASE_URL}/all/name`, {
-          params: { userId, name: searchQuery },
-        });
-        setContacts(response.data);
-      } else {
-        fetchContacts();
+
+      if (searchQuery.name.length > 0 || searchQuery.emailAddresses.length > 0) {
+        let nameFilter;
+        let emailAddressFilter;
+        if (searchQuery.name.length > 0) {
+          let response = await axios.get(`${API_BASE_URL}/all/name`, {
+            params: { userId, name: searchQuery.name },
+          })
+          nameFilter = response.data
+        }
+        if (searchQuery.emailAddresses.length > 0) {
+          let response = await axios.get(`${API_BASE_URL}/all/email-addresses`, {
+            params: { userId, emailAddress: searchQuery.emailAddresses
+                  .split(',')
+                  .map(item => item.trim())
+                  .join(',')},
+          });
+          emailAddressFilter = response.data
+        }
+        if (nameFilter && emailAddressFilter) {
+          console.log(emailAddressFilter)
+          const finalFilter = emailAddressFilter.filter(item1 => nameFilter
+                                                        .some(item2 => item1.id === item2.id))
+          console.log(finalFilter)
+          setContacts(finalFilter);
+        }
+        else {
+          if (nameFilter) setContacts(nameFilter);
+          else setContacts(emailAddressFilter);
+        }
+      }
+      else {
+        await fetchContacts();
       }
     } catch (error) {
       console.error("Error searching contacts:", error);
@@ -121,10 +161,10 @@ const ContactManager = ({ userId }) => {
   // Input handler
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === "emailAddresses") {
-      setNewContact({ ...newContact, emailAddresses: value.split(",") });
+    if (name === 'emailAddresses') {
+      setNewContact({ ...newContact, emailAddresses: value });
     } else {
-      setNewContact({ ...newContact, [name]: value });
+      setNewContact({ ...newContact, name: value });
     }
   };
 
@@ -144,7 +184,7 @@ const ContactManager = ({ userId }) => {
         />
         <input
           name="emailAddresses"
-          value={newContact.emailAddresses.join(",")}
+          value={newContact.emailAddresses}
           onChange={handleInputChange}
           placeholder="Email Addresses (comma-separated)"
         />
@@ -154,9 +194,14 @@ const ContactManager = ({ userId }) => {
       </div>
       <div>
         <input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search Contacts"
+            value={searchQuery.name}
+            onChange={(e) => setSearchQuery({ ...searchQuery, name: e.target.value})}
+            placeholder="Search by name"
+        />
+        <input
+            value={searchQuery.emailAddresses}
+            onChange={(e) => setSearchQuery({ ...searchQuery, emailAddresses: e.target.value})}
+            placeholder="Search by email addresses (comma-seperated)"
         />
         <button onClick={searchContacts}>Search</button>
         <button onClick={sortContacts}>
@@ -165,7 +210,7 @@ const ContactManager = ({ userId }) => {
       </div>
       <ul>
         {contacts.map((contact) => (
-          <li key={contact.id}>
+            <li key={contact.id}>
             <span>
               {contact.name} - {contact.emailAddresses.join(", ")}
             </span>
