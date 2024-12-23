@@ -327,9 +327,7 @@ const Mailbox = ({ user }) => {
       </div>
 
       <div className="email-list">
-        <h2>
-          Emails in {folders.find((f) => f.id === currentFolderId)?.label || "Folder"}
-        </h2>
+        <h2>Emails</h2>
         {emails.length === 0 ? (
           <p>No emails in this folder.</p>
         ) : (
