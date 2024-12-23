@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 
-const ComposeEmail = ({ onSend, defaultSender }) => {
+const ComposeEmail = ({ onSend, defaultSender, userId}) => {
   const [email, setEmail] = useState({
     from: defaultSender,
     to: "",
@@ -83,7 +83,7 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
     }
 
     const emailData = {
-        senderId: parseInt(email.from, 10),
+        senderId: userId,
         receiversEmailAddresses: recipientList,
         topic: email.subject,
         body: email.body,
@@ -214,6 +214,7 @@ const ComposeEmail = ({ onSend, defaultSender }) => {
 ComposeEmail.propTypes = {
   onSend: PropTypes.func.isRequired,
   defaultSender: PropTypes.string.isRequired,
+  userId: PropTypes.number.isRequired
 };
 
 export default ComposeEmail;

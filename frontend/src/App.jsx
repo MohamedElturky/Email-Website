@@ -22,11 +22,6 @@ const App = () => {
   const handleInputChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-  const validateEmails = (emails) => {
-    const emailList = emails.split(",").map((email) => email.trim());
-    const emailRegex = /^[a-zA-Z0-9]+@gmail\.com$/; // Regex for standard Gmail format
-    return emailList.every((email) => emailRegex.test(email));
-  };
 
   // Login user
   const loginUser = async () => {
@@ -55,10 +50,6 @@ const App = () => {
 
   // Register user
   const registerUser = async () => {
-    if (!validateEmails(form.email)) {
-      alert("Please enter a valid Gmail address (e.g., user@gmail.com).");
-      return;
-    }
 
     try {
       const response = await axios.post(
@@ -75,7 +66,6 @@ const App = () => {
       console.log("Registration successful:", response.data);
       alert(`Registration successful for ${response.data.emailAddress}. Please log in.`);
       setCurrentPage("login");
-      setForm({ email: "", password: "" }); // Reset form after registration
     } catch (error) {
       console.error("Registration failed:", error.response?.data || error.message);
       alert("Registration failed. Please try again.");
@@ -162,6 +152,7 @@ const App = () => {
               setEmails([...emails, email]);
             }}
             defaultSender={user?.email || ""}
+            userId={user.id}
           />
           <button onClick={() => setCurrentPage("mailbox")}>
             Open Mailbox
