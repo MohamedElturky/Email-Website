@@ -19,6 +19,8 @@ const Mailbox = ({ user }) => {
   const [filterReceivers, setFilterReceivers] = useState('');
   const [startDateTime, setStartDateTime] = useState('');
   const [endDateTime, setEndDateTime] = useState('');
+  const [dateTime, setDateTime] = useState(''); // For single date input
+  const [filterDateOption, setFilterDateOption] = useState(''); // New state for filter type
 
   // States for managing attachments
   const [selectedEmailId, setSelectedEmailId] = useState(null);
@@ -103,13 +105,30 @@ const Mailbox = ({ user }) => {
     }
 
       // Filter by date range with time
-      if (startDateTime && endDateTime) {
-        const dateResponse = await apiClient.get("/email/all/on-or-between", {
-          params: { userId: user.id, startDateTime, endDateTime },
-        });
-        filteredEmails = filteredEmails.length
-          ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
-          : dateResponse.data;
+      if (filterDateOption && dateTime) {
+        let dateResponse;
+        if (filterDateOption === 'after') {
+          dateResponse = await apiClient.get("/email/all/on-or-after", {
+            params: { userId: user.id, dateTime },
+          });
+          filteredEmails = filteredEmails.length
+              ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
+              : dateResponse.data;
+        } else if (filterDateOption === 'before') {
+          dateResponse = await apiClient.get("/email/all/on-or-before", {
+            params: { userId: user.id, dateTime },
+          });
+          filteredEmails = filteredEmails.length
+              ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
+              : dateResponse.data;
+        } else if (filterDateOption === 'between' && startDateTime && endDateTime) {
+          dateResponse = await apiClient.get("/email/all/on-or-between", {
+            params: { userId: user.id, startDateTime, endDateTime },
+          });
+          filteredEmails = filteredEmails.length
+              ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
+              : dateResponse.data;
+        }
       }
 
       // Set the filtered emails to state
@@ -317,16 +336,58 @@ const Mailbox = ({ user }) => {
               value={filterReceivers}
               onChange={(e) => setFilterReceivers(e.target.value)}
           />
-          <input
-              type="datetime-local"
-              value={startDateTime}
-              onChange={(e) => setStartDateTime(e.target.value)}
-          />
-          <input
-              type="datetime-local"
-              value={endDateTime}
-              onChange={(e) => setEndDateTime(e.target.value)}
-          />
+          <div>
+            <label>
+              <input
+                  type="radio"
+                  value="after"
+                  checked={filterDateOption === 'after'}
+                  onChange={() => setFilterDateOption('after')}
+              />
+              After
+            </label>
+            <label>
+              <input
+                  type="radio"
+                  value="before"
+                  checked={filterDateOption === 'before'}
+                  onChange={() => setFilterDateOption('before')}
+              />
+              Before
+            </label>
+            <label>
+              <input
+                  type="radio"
+                  value="between"
+                  checked={filterDateOption === 'between'}
+                  onChange={() => setFilterDateOption('between')}
+              />
+              Between
+            </label>
+          </div>
+
+          {(filterDateOption === 'after' || filterDateOption === 'before') && (
+              <input
+                  type="datetime-local"
+                  value={dateTime}
+                  onChange={(e) => setDateTime(e.target.value)}
+              />
+          )}
+
+          {filterDateOption === 'between' && (
+              <>
+                <input
+                    type="datetime-local"
+                    value={startDateTime}
+                    onChange={(e) => setStartDateTime(e.target.value)}
+                />
+                <input
+                    type="datetime-local"
+                    value={endDateTime}
+                    onChange={(e) => setEndDateTime(e.target.value)}
+                />
+              </>
+          )}
           <button onClick={applyFilters}>Apply Filters</button>
         </div>
 
