@@ -6,6 +6,7 @@ import edu.alexu.mail.repository.FolderRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -52,6 +53,11 @@ public class FolderService {
         return folderRepository.findAllByUserId(userId);
     }
 
+    public void moveEmail(Integer emailId, Folder toFolder) {
+        toFolder.getEmailsIds().add(emailId);
+        folderRepository.save(toFolder);
+    }
+
     public void moveEmail(Integer emailId, int fromId, int toId) {
         Folder fromFolder = getFolder(fromId);
         Folder toFolder = getFolder(toId);
@@ -67,12 +73,15 @@ public class FolderService {
         folderRepository.save(toFolder);
     }
 
-    public void createDefaultUserFolders(int userId) {
+    public List<Folder> createDefaultUserFolders(int userId) {
+        List<Folder> defaultFolders = new ArrayList<>();
         for (FolderType defaultFolder : FolderType.values()) {
             Folder folder = new Folder(defaultFolder.toString(),
                                         userId);
+            defaultFolders.add(folder);
             folderRepository.save(folder);
         }
+        return defaultFolders;
     }
 
     public Folder getFolder(int userId, FolderType folderType) {
@@ -117,6 +126,15 @@ public class FolderService {
                     emptyFolder(folder.getId());
                     folderRepository.save(folder);
                 });
+    }
+
+    public Folder findDefaultFolder(List<Folder> folders, FolderType folderType) {
+        return folders
+                .stream()
+                .filter(folder -> folder.getLabel()
+                        .equals(folderType.toString()))
+                .findFirst()
+                .orElseThrow();
     }
 
     private boolean isDefaultFolder(Folder folder) {

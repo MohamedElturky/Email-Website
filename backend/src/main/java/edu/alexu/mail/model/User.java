@@ -1,8 +1,10 @@
 package edu.alexu.mail.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import edu.alexu.mail.listener.UserListener;
 import jakarta.persistence.*;
 
+@EntityListeners(UserListener.class)
 @Entity
 @Table(name = "users")
 public class User {

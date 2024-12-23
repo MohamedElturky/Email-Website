@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import edu.alexu.mail.model.User;
 import edu.alexu.mail.repository.UserRepository;
 
+import javax.naming.AuthenticationException;
+
 
 @Service
 public class AuthenticationService {
@@ -20,14 +22,13 @@ public class AuthenticationService {
     }
 
     public User authenticateUser(String emailAddress, String rawPassword) {
-        User user = userRepository.findByEmailAddress(emailAddress).orElse(null);
+        User user = userRepository.findByEmailAddress(emailAddress).orElseThrow();
 
-        if (user != null
-            && passwordEncoder.matches(rawPassword, user.getHashedPassword())) {
+        if (passwordEncoder.matches(rawPassword, user.getHashedPassword())) {
             return user;
         }
         else {
-            return null;
+            throw new RuntimeException("Wrong email address and/or password.");
         }
     }
 }
