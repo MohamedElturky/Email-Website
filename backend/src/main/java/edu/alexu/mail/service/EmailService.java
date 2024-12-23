@@ -144,10 +144,19 @@ public class EmailService {
         List<Folder> userFolders = folderService.getAllFolders(userId);
         Folder trashFolder = folderService.getFolder(userId, FolderType.TRASH);
 
-        userFolders.forEach(folder -> folderService.deleteEmailFromFolder(emailId, folder.getId()));
+        // Check if email is in trash.
+        if (trashFolder.getEmailsIds().contains(emailId)) {
+            folderService.deleteEmailFromFolder(emailId, trashFolder.getId());
+        }
+        else {
+            // Delete the email from any folder.
+            userFolders.forEach(folder -> folderService.deleteEmailFromFolder(emailId, folder.getId()));
 
-        // Move folder to trash.
-        folderService.addEmailToFolder(emailId, trashFolder.getId());
+            // Move folder to trash.
+            folderService.addEmailToFolder(emailId, trashFolder.getId());
+        }
+
+
     }
 
     public Email restoreEmail(int userId, Integer emailId) {
