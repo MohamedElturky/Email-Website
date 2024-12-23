@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import PropTypes from "prop-types";
 
+
 // Create an Axios instance with a base URL
 const apiClient = axios.create({
   baseURL: "http://localhost:8080/api",
@@ -17,15 +18,19 @@ const Mailbox = ({ user }) => {
   const [filterTopic, setFilterTopic] = useState('');
   const [filterBody, setFilterBody] = useState('');
   const [filterReceivers, setFilterReceivers] = useState('');
-  const [startDateTime, setStartDateTime] = useState('');
-  const [endDateTime, setEndDateTime] = useState('');
-  const [dateTime, setDateTime] = useState(''); // For single date input
   const [filterDateOption, setFilterDateOption] = useState(''); // New state for filter type
+const [dateTime, setDateTime] = useState(''); // For single date input
+const [startDateTime, setStartDateTime] = useState('');
+const [endDateTime, setEndDateTime] = useState('');
+  const [filterAttachments, setFilterAttachments] = useState('');
 
   // States for managing attachments
   const [selectedEmailId, setSelectedEmailId] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [attachmentFiles, setAttachmentFiles] = useState([]);
+
+    // State for sorting option
+    const [sortOption, setSortOption] = useState('default')
 
   // Fetch all folders for the user
   const fetchFolders = async () => {
@@ -42,23 +47,31 @@ const Mailbox = ({ user }) => {
     }
   };
 
-  const fetchEmails = async (folderId) => {
+  const fetchEmails = useCallback(async (folderId, sortBy = 'default') => {
     try {
-      const response = await apiClient.get("/email/folder/default", {
+      const endpoint = sortBy === 'priority' 
+        ? "/email/folder/priority" 
+        : "/email/folder/default";
+  
+      const response = await apiClient.get(endpoint, {
         params: { folderId },
       });
       setEmails(response.data);
     } catch (error) {
       console.error("Error fetching emails:", error.message);
     }
-  }
+  }, []);
 
-  // Load emails based on folder ID
-  const loadEmails = useCallback(async (folderId) => fetchEmails(folderId), []);
+  // Fetch emails when currentFolderId or sortOption changes
+  useEffect(() => {
+    if (currentFolderId) {
+      fetchEmails(currentFolderId, sortOption); // Add sortOption here
+    }
+  }, [currentFolderId, sortOption, fetchEmails]);
+
 
   // Apply filters and fetch filtered emails
   const applyFilters = async () => {
-
     try {
       let filteredEmails = [];
 
@@ -104,31 +117,42 @@ const Mailbox = ({ user }) => {
         : receiversResponse.data;
     }
 
-      // Filter by date range with time
-      if (filterDateOption && dateTime) {
-        let dateResponse;
-        if (filterDateOption === 'after') {
-          dateResponse = await apiClient.get("/email/all/on-or-after", {
-            params: { userId: user.id, dateTime },
-          });
-          filteredEmails = filteredEmails.length
-              ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
-              : dateResponse.data;
-        } else if (filterDateOption === 'before') {
-          dateResponse = await apiClient.get("/email/all/on-or-before", {
-            params: { userId: user.id, dateTime },
-          });
-          filteredEmails = filteredEmails.length
-              ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
-              : dateResponse.data;
-        } else if (filterDateOption === 'between' && startDateTime && endDateTime) {
-          dateResponse = await apiClient.get("/email/all/on-or-between", {
-            params: { userId: user.id, startDateTime, endDateTime },
-          });
-          filteredEmails = filteredEmails.length
-              ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
-              : dateResponse.data;
-        }
+     // Date filtering logic
+  if (filterDateOption && dateTime) {
+  let dateResponse;
+  if (filterDateOption === 'after') {
+    dateResponse = await apiClient.get("/email/all/on-or-after", {
+      params: { userId: user.id, dateTime },
+    });
+    filteredEmails = filteredEmails.length
+      ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
+      : dateResponse.data;
+  } else if (filterDateOption === 'before') {
+    dateResponse = await apiClient.get("/email/all/on-or-before", {
+      params: { userId: user.id, dateTime },
+    });
+    filteredEmails = filteredEmails.length
+      ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
+      : dateResponse.data;
+  } else if (filterDateOption === 'between' && startDateTime && endDateTime) {
+    dateResponse = await apiClient.get("/email/all/on-or-between", {
+      params: { userId: user.id, startDateTime, endDateTime },
+    });
+    filteredEmails = filteredEmails.length
+      ? filteredEmails.filter((email) => dateResponse.data.some((e) => e.id === email.id))
+      : dateResponse.data;
+  }
+}
+
+      // Fetch by attachments
+      if (filterAttachments) {
+        const attachmentsArray = filterAttachments.split(",").map((attachment) => attachment.trim());
+        const attachmentsResponse = await apiClient.get("/email/all/attachments", {
+          params: { userId: user.id, attachments: attachmentsArray },
+        });
+        filteredEmails = filteredEmails.length
+          ? filteredEmails.filter((email) => attachmentsResponse.data.some((e) => e.id === email.id))
+          : attachmentsResponse.data;
       }
 
       // Set the filtered emails to state
@@ -291,171 +315,201 @@ const Mailbox = ({ user }) => {
 
   useEffect(() => {
     if (currentFolderId) {
-      loadEmails(currentFolderId);
+      fetchEmails(currentFolderId);
     }
-  }, [currentFolderId, loadEmails]);
+  }, [currentFolderId, fetchEmails]);
+
+  const refreshData = async () => {
+    await fetchFolders(); // Refresh the folder list
+    if (currentFolderId) {
+      await fetchEmails(currentFolderId); // Refresh emails for the current folder
+    }
+  };
 
   return (
-      <div>
-        <button onClick={() => fetchEmails(currentFolderId)}>Refresh</button>
-        <div className="folder-list">
-          {folders.map((folder) => (
-              <button
-                  key={folder.id}
-                  onClick={() => setCurrentFolderId(folder.id)}
-                  className={currentFolderId === folder.id ? "active" : ""}
-              >
-                {folder.label}
-              </button>
-          ))}
-          <button onClick={() => addFolder(prompt("Enter folder name:"))}>+ Add Folder</button>
-        </div>
-
-        <div className="filter-section">
-          <input
-              type="text"
-              placeholder="Filter by Sender"
-              value={filterSender}
-              onChange={(e) => setFilterSender(e.target.value)}
-          />
-          <input
-              type="text"
-              placeholder="Filter by Topic"
-              value={filterTopic}
-              onChange={(e) => setFilterTopic(e.target.value)}
-          />
-          <input
-              type="text"
-              placeholder="Filter by Body"
-              value={filterBody}
-              onChange={(e) => setFilterBody(e.target.value)}
-          />
-          <input
-              type="text"
-              placeholder="Filter by Receivers (comma separated)"
-              value={filterReceivers}
-              onChange={(e) => setFilterReceivers(e.target.value)}
-          />
-          <div>
-            <label>
-              <input
-                  type="radio"
-                  value="after"
-                  checked={filterDateOption === 'after'}
-                  onChange={() => setFilterDateOption('after')}
-              />
-              After
-            </label>
-            <label>
-              <input
-                  type="radio"
-                  value="before"
-                  checked={filterDateOption === 'before'}
-                  onChange={() => setFilterDateOption('before')}
-              />
-              Before
-            </label>
-            <label>
-              <input
-                  type="radio"
-                  value="between"
-                  checked={filterDateOption === 'between'}
-                  onChange={() => setFilterDateOption('between')}
-              />
-              Between
-            </label>
-          </div>
-
-          {(filterDateOption === 'after' || filterDateOption === 'before') && (
-              <input
-                  type="datetime-local"
-                  value={dateTime}
-                  onChange={(e) => setDateTime(e.target.value)}
-              />
-          )}
-
-          {filterDateOption === 'between' && (
-              <>
-                <input
-                    type="datetime-local"
-                    value={startDateTime}
-                    onChange={(e) => setStartDateTime(e.target.value)}
-                />
-                <input
-                    type="datetime-local"
-                    value={endDateTime}
-                    onChange={(e) => setEndDateTime(e.target.value)}
-                />
-              </>
-          )}
-          <button onClick={applyFilters}>Apply Filters</button>
-        </div>
-
-        <div className="email-list">
-          <h2>Emails</h2>
-          {emails.length === 0 ? (
-              <p>No emails in this folder.</p>
-          ) : (
-              <ul>
-                {emails.map((email) => (
-                    <li key={email.id}>
-                      <strong>Subject:</strong> {email.topic || "No Subject"} <br/>
-                      <strong>Body:</strong> {email.body || "No Body"} <br/>
-                      <strong>Priority:</strong> {email.priority} <br/>
-                      <strong>Sender:</strong> {email.senderId || "Unknown Sender"} <br/>
-                      <strong>Receivers:</strong>{" "}
-                      {email.receiversEmailAddresses.join(", ")} <br/>
-                      <strong>Sent At:</strong> {email.creationDateTime} <br/>
-                      <button onClick={() => deleteEmail(email.id)} disabled={loading}>
-                        Delete
-                      </button>
-
-
-                      <button onClick={() => {
-                        setSelectedEmailId(email.id);
-                        fetchAttachments(email.id); // Fetch attachments when viewing
-                      }}>View Attachments
-                      </button>
-
-                      {selectedEmailId === email.id && (
-                          <div>
-                            <strong>Attachments:</strong>
-                            <ul>
-                              {attachments.map((fileName) => (
-                                  <li key={fileName}>
-                                    {fileName}
-                                    <button onClick={() => getDownloadLink(email.id, fileName)}>Download</button>
-                                    <button onClick={() => deleteAttachment(email.id, fileName)}>Delete</button>
-                                  </li>
-                              ))}
-                            </ul>
-                            <input type="file" multiple onChange={(e) => setAttachmentFiles(e.target.files)}/>
-                            <button onClick={() => uploadAttachments(email.id)}>Upload Attachments</button>
-                          </div>
-                      )}
-                    </li>
-                ))}
-              </ul>
-          )}
-        </div>
-
-        <div className="folder-actions">
+    <div>
+      <div className="folder-list">
+        {folders.map((folder) => (
           <button
-              onClick={() =>
-                  renameFolder(
-                      currentFolderId,
-                      prompt(
-                          "Enter new name for folder:",
-                          folders.find((f) => f.id === currentFolderId)?.label || ""
-                      )
-                  )
-              }
+            key={folder.id}
+            onClick={() => setCurrentFolderId(folder.id)}
+            className={currentFolderId === folder.id ? "active" : ""}
           >
-            Rename Folder
+            {folder.label}
           </button>
-          <button onClick={() => currentFolderId && deleteFolder(currentFolderId)}>Delete Folder</button>
-        </div>
+
+        ))}
+        <button onClick={() => addFolder(prompt("Enter folder name:"))}>+ Add Folder</button>
+        <button onClick={refreshData}>🔄 Refresh</button> {/* Refresh Button */}
       </div>
+
+       {/* Sorting Options */}
+      <div className="sorting-section">
+        <label>
+          <select value={sortOption} onChange={(e) => setSortOption(e.target.value)}>
+            <option value="default">Sort by Date</option>
+            <option value="priority">Sort by Priority</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="filter-section">
+        <input 
+          type="text" 
+          placeholder="Filter by Sender" 
+          value={filterSender} 
+          onChange={(e) => setFilterSender(e.target.value)} 
+        />
+        <input 
+          type="text" 
+          placeholder="Filter by Topic" 
+          value={filterTopic} 
+          onChange={(e) => setFilterTopic(e.target.value)} 
+        />
+        <input 
+          type="text" 
+          placeholder="Filter by Body" 
+          value={filterBody} 
+          onChange={(e) => setFilterBody(e.target.value)} 
+        />
+        <input 
+          type="text" 
+          placeholder="Filter by Receivers (comma separated)" 
+          value={filterReceivers} 
+          onChange={(e) => setFilterReceivers(e.target.value)} 
+        />
+        <input 
+          type="text" 
+          placeholder="Filter by Attachments (comma separated)" 
+          value={filterAttachments} 
+          onChange={(e) => setFilterAttachments(e.target.value)} 
+        />
+        <div>
+  <label>
+    <input 
+      type="radio" 
+      value="after" 
+      checked={filterDateOption === 'after'} 
+      onChange={() => setFilterDateOption('after')} 
+    />
+    After
+  </label>
+  <label>
+    <input 
+      type="radio" 
+      value="before" 
+      checked={filterDateOption === 'before'} 
+      onChange={() => setFilterDateOption('before')} 
+    />
+    Before
+  </label>
+  <label>
+    <input 
+      type="radio" 
+      value="between" 
+      checked={filterDateOption === 'between'} 
+      onChange={() => setFilterDateOption('between')} 
+    />
+    Between
+  </label>
+</div>
+
+{(filterDateOption === 'after' || filterDateOption === 'before') && (
+    <input 
+      type="datetime-local" 
+      value={dateTime} 
+      onChange={(e) => setDateTime(e.target.value)} 
+    />
+  )}
+
+  {filterDateOption === 'between' && (
+    <>
+      <input 
+        type="datetime-local" 
+        value={startDateTime} 
+        onChange={(e) => setStartDateTime(e.target.value)} 
+      />
+      <input 
+        type="datetime-local" 
+        value={endDateTime} 
+        onChange={(e) => setEndDateTime(e.target.value)} 
+      />
+    </>
+    
+  )}
+
+
+
+        <button onClick={applyFilters}>Apply Filters</button>
+      </div>
+
+      <div className="email-list">
+        <h2>
+          Emails 
+        </h2>
+        {emails.length === 0 ? (
+          <p>No emails in this folder.</p>
+        ) : (
+          <ul>
+            {emails.map((email) => (
+              <li key={email.id}>
+                <strong>Subject:</strong> {email.topic || "No Subject"} <br />
+                <strong>Body:</strong> {email.body || "No Body"} <br />
+                <strong>Priority:</strong> {email.priority} <br />
+                <strong>Sender:</strong> {email.senderId || "Unknown Sender"} <br />
+                <strong>Receivers:</strong>{" "}
+                {email.receiversEmailAddresses.join(", ")} <br />
+                <strong>Sent At:</strong> {email.creationDateTime} <br />
+                <button onClick={() => deleteEmail(email.id)} disabled={loading}>
+  Delete
+</button>
+
+
+                <button onClick={() => {
+                  setSelectedEmailId(email.id);
+                  fetchAttachments(email.id); // Fetch attachments when viewing
+                }}>View Attachments</button>
+                
+                {selectedEmailId === email.id && (
+                  <div>
+                    <strong>Attachments:</strong>
+                    <ul>
+                      {attachments.map((fileName) => (
+                        <li key={fileName}>
+                          {fileName} 
+                          <button onClick={() => getDownloadLink(email.id, fileName)}>Download</button>
+                          <button onClick={() => deleteAttachment(email.id, fileName)}>Delete</button>
+                        </li>
+                      ))}
+                    </ul>
+                    <input type="file" multiple onChange={(e) => setAttachmentFiles(e.target.files)} />
+                    <button onClick={() => uploadAttachments(email.id)}>Upload Attachments</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+        
+      <div className="folder-actions">
+        <button
+          onClick={() =>
+            renameFolder(
+              currentFolderId,
+              prompt(
+                "Enter new name for folder:",
+                folders.find((f) => f.id === currentFolderId)?.label || ""
+              )
+            )
+          }
+        >
+          Rename Folder
+        </button>
+        <button onClick={() => currentFolderId && deleteFolder(currentFolderId)}>Delete Folder</button>
+      </div>
+    </div>
   );
 };
 
