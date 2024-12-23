@@ -40,8 +40,7 @@ const Mailbox = ({ user }) => {
     }
   };
 
-  // Fetch emails based on folder ID
-  const fetchEmails = useCallback(async (folderId) => {
+  const fetchEmails = async (folderId) => {
     try {
       const response = await apiClient.get("/email/folder/default", {
         params: { folderId },
@@ -50,10 +49,14 @@ const Mailbox = ({ user }) => {
     } catch (error) {
       console.error("Error fetching emails:", error.message);
     }
-  }, []);
+  }
+
+  // Load emails based on folder ID
+  const loadEmails = useCallback(async (folderId) => fetchEmails(folderId), []);
 
   // Apply filters and fetch filtered emails
   const applyFilters = async () => {
+
     try {
       let filteredEmails = [];
 
@@ -269,127 +272,129 @@ const Mailbox = ({ user }) => {
 
   useEffect(() => {
     if (currentFolderId) {
-      fetchEmails(currentFolderId);
+      loadEmails(currentFolderId);
     }
-  }, [currentFolderId, fetchEmails]);
+  }, [currentFolderId, loadEmails]);
 
   return (
-    <div>
-      <div className="folder-list">
-        {folders.map((folder) => (
+      <div>
+        <button onClick={() => fetchEmails(currentFolderId)}>Refresh</button>
+        <div className="folder-list">
+          {folders.map((folder) => (
+              <button
+                  key={folder.id}
+                  onClick={() => setCurrentFolderId(folder.id)}
+                  className={currentFolderId === folder.id ? "active" : ""}
+              >
+                {folder.label}
+              </button>
+          ))}
+          <button onClick={() => addFolder(prompt("Enter folder name:"))}>+ Add Folder</button>
+        </div>
+
+        <div className="filter-section">
+          <input
+              type="text"
+              placeholder="Filter by Sender"
+              value={filterSender}
+              onChange={(e) => setFilterSender(e.target.value)}
+          />
+          <input
+              type="text"
+              placeholder="Filter by Topic"
+              value={filterTopic}
+              onChange={(e) => setFilterTopic(e.target.value)}
+          />
+          <input
+              type="text"
+              placeholder="Filter by Body"
+              value={filterBody}
+              onChange={(e) => setFilterBody(e.target.value)}
+          />
+          <input
+              type="text"
+              placeholder="Filter by Receivers (comma separated)"
+              value={filterReceivers}
+              onChange={(e) => setFilterReceivers(e.target.value)}
+          />
+          <input
+              type="datetime-local"
+              value={startDateTime}
+              onChange={(e) => setStartDateTime(e.target.value)}
+          />
+          <input
+              type="datetime-local"
+              value={endDateTime}
+              onChange={(e) => setEndDateTime(e.target.value)}
+          />
+          <button onClick={applyFilters}>Apply Filters</button>
+        </div>
+
+        <div className="email-list">
+          <h2>Emails</h2>
+          {emails.length === 0 ? (
+              <p>No emails in this folder.</p>
+          ) : (
+              <ul>
+                {emails.map((email) => (
+                    <li key={email.id}>
+                      <strong>Subject:</strong> {email.topic || "No Subject"} <br/>
+                      <strong>Body:</strong> {email.body || "No Body"} <br/>
+                      <strong>Priority:</strong> {email.priority} <br/>
+                      <strong>Sender:</strong> {email.senderId || "Unknown Sender"} <br/>
+                      <strong>Receivers:</strong>{" "}
+                      {email.receiversEmailAddresses.join(", ")} <br/>
+                      <strong>Sent At:</strong> {email.creationDateTime} <br/>
+                      <button onClick={() => deleteEmail(email.id)} disabled={loading}>
+                        Delete
+                      </button>
+
+
+                      <button onClick={() => {
+                        setSelectedEmailId(email.id);
+                        fetchAttachments(email.id); // Fetch attachments when viewing
+                      }}>View Attachments
+                      </button>
+
+                      {selectedEmailId === email.id && (
+                          <div>
+                            <strong>Attachments:</strong>
+                            <ul>
+                              {attachments.map((fileName) => (
+                                  <li key={fileName}>
+                                    {fileName}
+                                    <button onClick={() => getDownloadLink(email.id, fileName)}>Download</button>
+                                    <button onClick={() => deleteAttachment(email.id, fileName)}>Delete</button>
+                                  </li>
+                              ))}
+                            </ul>
+                            <input type="file" multiple onChange={(e) => setAttachmentFiles(e.target.files)}/>
+                            <button onClick={() => uploadAttachments(email.id)}>Upload Attachments</button>
+                          </div>
+                      )}
+                    </li>
+                ))}
+              </ul>
+          )}
+        </div>
+
+        <div className="folder-actions">
           <button
-            key={folder.id}
-            onClick={() => setCurrentFolderId(folder.id)}
-            className={currentFolderId === folder.id ? "active" : ""}
+              onClick={() =>
+                  renameFolder(
+                      currentFolderId,
+                      prompt(
+                          "Enter new name for folder:",
+                          folders.find((f) => f.id === currentFolderId)?.label || ""
+                      )
+                  )
+              }
           >
-            {folder.label}
+            Rename Folder
           </button>
-        ))}
-        <button onClick={() => addFolder(prompt("Enter folder name:"))}>+ Add Folder</button>
+          <button onClick={() => currentFolderId && deleteFolder(currentFolderId)}>Delete Folder</button>
+        </div>
       </div>
-
-      <div className="filter-section">
-        <input 
-          type="text" 
-          placeholder="Filter by Sender" 
-          value={filterSender} 
-          onChange={(e) => setFilterSender(e.target.value)} 
-        />
-        <input 
-          type="text" 
-          placeholder="Filter by Topic" 
-          value={filterTopic} 
-          onChange={(e) => setFilterTopic(e.target.value)} 
-        />
-        <input 
-          type="text" 
-          placeholder="Filter by Body" 
-          value={filterBody} 
-          onChange={(e) => setFilterBody(e.target.value)} 
-        />
-        <input 
-          type="text" 
-          placeholder="Filter by Receivers (comma separated)" 
-          value={filterReceivers} 
-          onChange={(e) => setFilterReceivers(e.target.value)} 
-        />
-        <input 
-          type="datetime-local" 
-          value={startDateTime} 
-          onChange={(e) => setStartDateTime(e.target.value)} 
-        />
-        <input 
-          type="datetime-local" 
-          value={endDateTime} 
-          onChange={(e) => setEndDateTime(e.target.value)} 
-        />
-        <button onClick={applyFilters}>Apply Filters</button>
-      </div>
-
-      <div className="email-list">
-        <h2>Emails</h2>
-        {emails.length === 0 ? (
-          <p>No emails in this folder.</p>
-        ) : (
-          <ul>
-            {emails.map((email) => (
-              <li key={email.id}>
-                <strong>Subject:</strong> {email.topic || "No Subject"} <br />
-                <strong>Body:</strong> {email.body || "No Body"} <br />
-                <strong>Priority:</strong> {email.priority} <br />
-                <strong>Sender:</strong> {email.senderId || "Unknown Sender"} <br />
-                <strong>Receivers:</strong>{" "}
-                {email.receiversEmailAddresses.join(", ")} <br />
-                <strong>Sent At:</strong> {email.creationDateTime} <br />
-                <button onClick={() => deleteEmail(email.id)} disabled={loading}>
-  Delete
-</button>
-
-
-                <button onClick={() => {
-                  setSelectedEmailId(email.id);
-                  fetchAttachments(email.id); // Fetch attachments when viewing
-                }}>View Attachments</button>
-                
-                {selectedEmailId === email.id && (
-                  <div>
-                    <strong>Attachments:</strong>
-                    <ul>
-                      {attachments.map((fileName) => (
-                        <li key={fileName}>
-                          {fileName} 
-                          <button onClick={() => getDownloadLink(email.id, fileName)}>Download</button>
-                          <button onClick={() => deleteAttachment(email.id, fileName)}>Delete</button>
-                        </li>
-                      ))}
-                    </ul>
-                    <input type="file" multiple onChange={(e) => setAttachmentFiles(e.target.files)} />
-                    <button onClick={() => uploadAttachments(email.id)}>Upload Attachments</button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="folder-actions">
-        <button
-          onClick={() =>
-            renameFolder(
-              currentFolderId,
-              prompt(
-                "Enter new name for folder:",
-                folders.find((f) => f.id === currentFolderId)?.label || ""
-              )
-            )
-          }
-        >
-          Rename Folder
-        </button>
-        <button onClick={() => currentFolderId && deleteFolder(currentFolderId)}>Delete Folder</button>
-      </div>
-    </div>
   );
 };
 

@@ -69,18 +69,8 @@ const ComposeEmail = ({ onSend, defaultSender, userId}) => {
     setEmail({ ...email, attachments: updatedAttachments });
   };
 
-  const validateEmails = (emails) => {
-    const emailList = emails.split(",").map((email) => email.trim());
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailList.every((email) => emailRegex.test(email));
-  };
-
   const handleSend = async () => {
     const recipientList = email.to.split(",").map((recipient) => recipient.trim());
-    if (!validateEmails(email.to)) {
-        setError("One or more recipient emails are invalid. Please check the format.");
-        return;
-    }
 
     const emailData = {
         senderId: userId,
